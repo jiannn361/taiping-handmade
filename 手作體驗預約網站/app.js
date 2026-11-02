@@ -1,0 +1,38 @@
+const $=id=>document.getElementById(id);
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+$('date').min=today();
+const money=n=>'NT$ '+n.toLocaleString('en-US');
+function selection(){return document.querySelector('[name=experience]:checked');}
+function update(){const item=selection(),n=Number($('people').value);$('sum-exp').textContent=item.value;$('sum-location').textContent=item.dataset.location;$('sum-people').textContent=Number.isInteger(n)&&n>0?n+' 人':'請填寫人數';$('sum-date').textContent=[$('date').value,$('time').value].filter(Boolean).join(' · ')||'尚未選擇';$('total').textContent=money(Number(item.dataset.price)*(Number.isInteger(n)&&n>0?n:0));}
+$('form').addEventListener('input',update);update();
+let summary='',sent=false,liffReady=false;
+$('form').addEventListener('submit',e=>{e.preventDefault();$('date').min=today();if(!$('form').reportValidity())return;if(!$('name').value.trim()){$('name').setCustomValidity('請填寫姓名');$('name').reportValidity();return;}const i=selection();summary=['【手作體驗預約申請】','體驗：'+i.value,'地點：'+i.dataset.location,'日期：'+$('date').value,'希望時間：'+$('time').value,'人數：'+$('people').value+' 人','姓名：'+$('name').value.trim(),'手機：'+$('phone').value.trim(),'預估費用：'+money(Number(i.dataset.price)*Number($('people').value)),'※ 待工作室回覆確認後，預約才成立。'].join('\n');sent=false;$('message').textContent=summary;$('copy').textContent='複製預約摘要';$('send').disabled=!liffReady;$('send').textContent='傳送至 LINE 聊天室';$('status').textContent=liffReady?'尚未傳送，請確認後按下傳送。':'尚未傳送。請複製摘要並貼至工作室 LINE 聊天室。';$('review').showModal();});
+$('name').addEventListener('input',()=>$('name').setCustomValidity(''));
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(summary);$('copy').textContent='已複製';$('status').textContent='已複製，請貼到工作室 LINE 聊天室並送出。';}catch{$('status').textContent='無法自動複製，請選取上方摘要並手動複製。';}};
+$('send').onclick=async()=>{if(!liffReady||sent)return;$('send').disabled=true;try{await liff.sendMessages([{type:'text',text:summary}]);sent=true;$('status').textContent='預約申請已傳送至聊天室，請等待工作室確認。';$('send').textContent='已傳送申請 ✓';}catch{$('status').textContent='傳送失敗，請重試或複製摘要貼至工作室 LINE 聊天室。';$('send').disabled=false;}};
+async function initLine(){if(!window.BOOKING_CONFIG?.liffId)return;try{await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://static.line-scdn.net/liff/edge/2/sdk.js';script.onload=resolve;script.onerror=reject;document.head.append(script);});await liff.init({liffId:window.BOOKING_CONFIG.liffId});const context=liff.getContext();liffReady=liff.isInClient()&&liff.isLoggedIn()&&['utou','group','room'].includes(context?.type);$('send').disabled=!liffReady;}catch{liffReady=false;}}initLine();
+
+
+
+const notesByExperience={
+'手拉胚':['體驗地點：無二窯藝術空間。','建議體驗前先修剪指甲，避免指甲過長影響手作過程。','陶藝作品需經乾燥與柴燒，當天無法帶回。','柴燒需累積一定作品量後才會燒製，需等待半年至一年；完成後另行通知。','作品可自取，或郵寄（酌收運費 NT$100）。'],
+'陶杯刻畫':['體驗地點：無二窯藝術空間。','陶藝作品需經乾燥與柴燒，當天無法帶回。','柴燒需累積一定作品量後才會燒製，需等待半年至一年；完成後另行通知。','作品可自取，或郵寄（酌收運費 NT$100）。'],
+'植物槌染':['體驗地點：雲梯廣場第一涼亭處。','施作時將花瓣或葉子以同一方向敲打，使植物汁液轉印到布料。','完成後撕去殘留葉片；為讓顏色更持久，可浸泡冷鹽水／稀釋蘇打水，再鋪平晾乾。']
+};
+function showExperienceInfo(){
+ const name=selection().value,index=['手拉胚','陶杯刻畫','植物槌染'].indexOf(name);
+ $('info-title').textContent=name+'｜注意事項';
+ $('experience-notes').replaceChildren(...notesByExperience[name].map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
+ const custom=window.BOOKING_CONFIG.processImages?.[name];
+ $('process-frame').hidden=!custom;if(custom)$('process-image').src=custom;
+ $('process-image').alt=name+'施作流程圖';
+ $('process-frame').classList.toggle('custom-image',Boolean(custom));
+ $('process-image').style.transform='none';
+}
+$('form').addEventListener('change',e=>{if(e.target.name==='experience')showExperienceInfo();});
+showExperienceInfo();
+
+function optionalImage(image,src){image.hidden=!src;if(!src)return;image.src=src;image.onerror=()=>{image.hidden=true;};}
+optionalImage($('mascot'),window.BOOKING_CONFIG.mascot);
+document.querySelectorAll('.card').forEach(card=>{const name=card.querySelector('input').value,src=window.BOOKING_CONFIG.experiencePhotos?.[name];if(!src)return;const tile=card.querySelector('.tile'),image=document.createElement('img');image.alt=name+'體驗照片';image.src=src;image.onerror=()=>image.remove();tile.replaceChildren(image);});
+$('process-image').addEventListener('error',()=>{$('process-frame').hidden=true;});
