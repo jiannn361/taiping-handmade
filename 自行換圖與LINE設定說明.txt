@@ -1,0 +1,18 @@
+自行替換流程圖
+
+1. 解壓縮「手作體驗預約網站.zip」。
+2. 將您的三張圖放進 images 資料夾，例如 pottery.png、cup.png、plant.png。
+3. 用記事本開啟 config.js，在 processImages 填入：
+   '手拉胚': 'images/pottery.png'
+   '陶杯刻畫': 'images/cup.png'
+   '植物槌染': 'images/plant.png'
+4. 儲存後重新開啟 index.html，即可查看。圖檔名稱需與設定一致。
+5. 上線時上傳整個解壓縮資料夾。單檔「手作體驗預約.html」是方便預覽的整合版本；要自己換圖請使用 ZIP 內的網站版本。
+
+LINE 串接
+網站需要 HTTPS 正式網址。GitHub Pages 是其中一種選擇，也可使用其他靜態網站主機，並非必須使用 GitHub。
+將正式網址設為 LIFF 的 Endpoint URL，啟用 chat_message.write 權限。
+LINE 官方帳號選單或聊天室放置的入口連結應為：
+https://liff.line.me/2009010332-K14upnUb
+需實機測試是否能從該聊天室送回預約訊息。
+目前沒有後台預約資料庫，資訊是以文字送回 LINE 聊天室，須由工作室回覆確認。
