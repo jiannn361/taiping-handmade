@@ -26,7 +26,8 @@ async function connectLine(){
 }
 $('send').onclick=async()=>{
  if(sent||!bookingSnapshot)return;
- if(bookingDateReason(bookingSnapshot.date,window.BOOKING_CONFIG,today())){$('status').textContent='原選日期已無法預約，請關閉此視窗並重新選擇日期。';return;}
+ if(bookingDateReason(bookingSnapshot.date,window.BOOKING_CONFIG,today(),bookingSnapshot.experience)){$('status').textContent='原選日期已無法預約，請關閉此視窗並重新選擇日期。';return;}
+ if(!allowedBookingTimes(bookingSnapshot.date,bookingSnapshot.experience).includes(bookingSnapshot.time)){ $('status').textContent='原時段已無法預約，請重新選擇時間。';return;}
  if(lineState==='loading'){$('status').textContent=lineStatusMessage();return;}
  if(lineState!=='ready'){$('status').textContent=lineStatusMessage();return;}
  $('send').disabled=true;$('send').textContent='正在傳送小卡…';
@@ -34,4 +35,6 @@ $('send').onclick=async()=>{
  catch(error){$('send').disabled=false;$('send').textContent='重試傳送預約小卡';$('status').textContent=String(error.code)==='403'?'LINE 拒絕傳送。請從官方帳號聊天室重新點開 LIFF 連結，並確認 chat_message.write 權限；也可先複製文字摘要。':'小卡傳送失敗，尚未送出。請重試，或複製文字摘要貼至官方帳號聊天室。';}
 };
 connectLine();
+
+
 
