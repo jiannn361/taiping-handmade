@@ -11,7 +11,7 @@ function openExperienceNotice(){
  processMedia=window.BOOKING_CONFIG.processImages?.[selection().value]||'';
  isGif=/\.gif(?:[?#]|$)/i.test(processMedia);
  $('motion-toggle').hidden=!isGif;
- $('process-image').hidden=!processMedia;
+ $('process-frame').hidden=!processMedia;$('process-image').hidden=!processMedia;if(processMedia)$('process-image').src=processMedia;$('media-error').hidden=true;
  if(isGif)setProcessPlayback(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  if(!noticeDialog.open){noticeDialog.showModal();noticeDialog.querySelector('.notice-scroll').scrollTop=0;}
 }
@@ -27,3 +27,7 @@ noticeDialog.addEventListener('close',()=>{$('process-image').removeAttribute('s
 noticeDialog.addEventListener('click',event=>{if(event.target===noticeDialog){const r=noticeDialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)noticeDialog.close();}});
 // Do not download or play process media until the visitor opens the notice.
 $('process-image').removeAttribute('src');
+
+const mediaError=document.createElement('p');mediaError.id='media-error';mediaError.className='note';mediaError.hidden=true;mediaError.setAttribute('role','status');$('process-frame').append(mediaError);
+$('process-image').addEventListener('load',()=>{if(!noticeDialog.open)return;if($('process-image').getAttribute('src')){$('process-frame').hidden=false;mediaError.hidden=true;}});
+$('process-image').addEventListener('error',()=>{if(!noticeDialog.open||!$('process-image').getAttribute('src'))return;$('process-frame').hidden=false;mediaError.textContent='圖片暫時無法載入，請確認圖片已與網站一起上傳，再重新開啟須知。';mediaError.hidden=false;});

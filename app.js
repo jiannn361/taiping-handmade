@@ -34,7 +34,7 @@ showExperienceInfo();
 function optionalImage(image,src){image.hidden=!src;if(!src)return;image.src=src;image.onerror=()=>{image.hidden=true;};}
 optionalImage($('mascot'),window.BOOKING_CONFIG.mascot);
 document.querySelectorAll('.card').forEach(card=>{const name=card.querySelector('input').value,src=window.BOOKING_CONFIG.experiencePhotos?.[name];if(!src)return;const tile=card.querySelector('.tile'),image=document.createElement('img');image.alt=name+'體驗照片';image.src=src;image.onerror=()=>image.remove();tile.replaceChildren(image);});
-$('process-image').addEventListener('error',()=>{$('process-frame').hidden=true;});
+// 須知視窗的照片載入與錯誤由 notices.js 統一處理。
 
 
 function validateBookingDate(){
@@ -65,6 +65,7 @@ function renderCalendar(){
  calendar.append(grid);
 }
 renderCalendar();
+
 
 
 
