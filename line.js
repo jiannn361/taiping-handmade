@@ -10,7 +10,7 @@ function lineStatusMessage(){return {
 }[lineState];}
 function bookingFlex(data){
  const rows=[['體驗',data.experience],['地點',data.location],['日期',data.date],['希望時間',data.time],['人數',data.people+' 人'],['姓名',data.name],['手機',data.phone],['預估費用',data.total]];
- return {type:'flex',altText:'體驗預約申請｜'+data.experience+'｜'+data.date+' '+data.time,contents:{type:'bubble',body:{type:'box',layout:'vertical',spacing:'md',contents:[{type:'text',text:'嘉義梅山太平',color:'#65775F',size:'sm',weight:'bold'},{type:'text',text:'體驗預約申請',size:'xl',weight:'bold',wrap:true},{type:'separator'},...rows.map(([label,value])=>({type:'box',layout:'baseline',spacing:'sm',contents:[{type:'text',text:label,color:'#777777',size:'sm',flex:2},{type:'text',text:String(value),color:'#333333',size:'sm',wrap:true,flex:5}]})),{type:'separator'},{type:'text',text:'待工作室回覆確認後，預約才正式成立。',size:'xs',color:'#777777',wrap:true}]}}};
+ return {type:'flex',altText:'預約體驗內容｜'+data.experience+'｜'+data.date+' '+data.time,contents:{type:'bubble',body:{type:'box',layout:'vertical',spacing:'md',contents:[{type:'text',text:'嘉義梅山太平',color:'#65775F',size:'sm',weight:'bold'},{type:'text',text:'體驗預約申請',size:'xl',weight:'bold',wrap:true},{type:'separator'},...rows.map(([label,value])=>({type:'box',layout:'baseline',spacing:'sm',contents:[{type:'text',text:label,color:'#777777',size:'sm',flex:2},{type:'text',text:String(value),color:'#333333',size:'sm',wrap:true,flex:5}]})),{type:'separator'},{type:'text',text:'待工作室回覆確認後，預約才正式成立。',size:'xs',color:'#777777',wrap:true}]}}};
 }
 async function connectLine(){
  if(location.protocol==='file:'){lineState='local';return;}
