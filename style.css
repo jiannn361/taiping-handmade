@@ -13,3 +13,9 @@
 
 .fields select{display:block;width:100%;min-height:48px;border:1px solid var(--line);border-radius:3px;background:#fffefa;padding:12px;font:14px 'Noto Sans TC';color:var(--ink);margin-top:9px}.fields select:focus{outline:2px solid #84937a;outline-offset:1px}
 
+/* 日期整列，時間放下一列；照片完整呈現 */
+.date-field,.time-field{grid-column:1/-1}.tile{height:240px;min-height:240px}.tile img{object-fit:contain;background:#eeeae0}.brand{display:flex;align-items:center;gap:10px;font-size:23px;letter-spacing:1px}#mascot{width:58px;height:58px;margin:0;flex:none}.brand small{margin-left:0}.line-entry{display:block;text-align:center;margin-top:10px}.card-preview{border:1px solid #ccd5c7;border-radius:8px;background:white;overflow:hidden;margin:18px 0}.card-preview h3{background:#425743;color:white;margin:0;padding:16px;font-size:17px}.card-preview pre{margin:0;background:white;font-size:13px;padding:18px}.card-preview pre{white-space:pre-wrap}@media(max-width:800px){.tile{height:210px;min-height:210px}.brand{font-size:19px}}@media(max-width:440px){.card{display:block}.tile{width:100%;height:240px;min-height:240px}.card-body{padding:18px}.calendar-grid button{padding:12px 0}.brand{font-size:18px}#mascot{width:46px;height:46px}}
+/* 體驗照片統一橫式 4:3，完整顯示 */
+.card .tile{width:100%;height:auto;min-height:0;aspect-ratio:4/3;position:relative;overflow:hidden}
+.card .tile img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain}
+@media(max-width:800px){.card{display:block}.card .tile{width:100%;height:auto;min-height:0;aspect-ratio:4/3}}

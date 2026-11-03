@@ -21,7 +21,7 @@
 ## LINE
 
 上線後，將網站 HTTPS 正式網址填入 LIFF Endpoint URL，啟用 chat_message.write 權限。
-從官方帳號聊天室使用 https://liff.line.me/2009010332-K14upnUb 開啟並測試。
+從官方帳號聊天室使用 https://liff.line.me/2009010332-H3eAyCZD 開啟並測試。
 目前沒有預約資料庫，預約摘要傳回開啟 LIFF 的聊天室，由工作室回覆確認。
 不要在網站檔案放入 channel secret 或 access token。
 
@@ -41,3 +41,13 @@ images 中 pottery.jpg、cup.jpg、plant.jpg 已接到三項體驗照片。
 舊版都放入 _previous_versions，請勿再使用該資料夾內的舊網頁。
 .gitignore 會排除舊版備份及 ZIP，請將 .gitignore 也一起提交。
 本次整理僅修正本機檔案，尚未提交或上傳 GitHub。
+
+2026-11-03 版面與 LINE 更新
+- 日期獨佔一列，時間移至下一列。
+- 三項體驗照片顯示區提高，採完整顯示，不裁切。可用 JPG、PNG、WebP；建議橫式 4:3，寬度至少 1200px。直式也可完整顯示，旁邊可能留白。
+- 將標誌命名為 logo.png 放進 images，將顯示在「嘉義梅山太平」左側。建議透明背景正方形 PNG。若未放圖則自動隱藏。
+- LINE 改為 Flex 預約小卡，增加 line.js 檔案，上傳時務必一起包含。
+- 本機 file 網址無法直接傳送 LINE。上線網址需設為 LIFF Endpoint URL；官方帳號聊天室入口必須使用 https://liff.line.me/2009010332-H3eAyCZD ，並啟用 chat_message.write 權限。
+- 點選一般 HTTPS 網址開啟的 LINE 內建瀏覽器，不等於 LIFF 瀏覽器。請從官方帳號聊天室點 LIFF 連結測試。
+- Flex 小卡透過 LIFF 傳送不會觸發訊息 webhook。若後續需要自動記錄或自動回覆，須另加後端流程。
+
