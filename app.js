@@ -20,7 +20,7 @@ const notesByExperience={
 };
 function showExperienceInfo(){
  const name=selection().value,index=['手拉胚','陶杯刻畫','植物槌染'].indexOf(name);
- $('info-title').textContent=name+'｜注意事項';
+ $('info-title').textContent=name+'｜預約須知';
  $('experience-notes').replaceChildren(...notesByExperience[name].map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
  const custom=window.BOOKING_CONFIG.processImages?.[name];
  $('process-frame').hidden=!custom;if(custom)$('process-image').src=custom;
@@ -65,5 +65,6 @@ function renderCalendar(){
  calendar.append(grid);
 }
 renderCalendar();
+
 
 

@@ -51,3 +51,11 @@ images 中 pottery.jpg、cup.jpg、plant.jpg 已接到三項體驗照片。
 - 點選一般 HTTPS 網址開啟的 LINE 內建瀏覽器，不等於 LIFF 瀏覽器。請從官方帳號聊天室點 LIFF 連結測試。
 - Flex 小卡透過 LIFF 傳送不會觸發訊息 webhook。若後續需要自動記錄或自動回覆，須另加後端流程。
 
+
+體驗須知彈出視窗
+點選任一體驗即可查看須知，關閉後留在原本填表位置。
+若要放動態過程，將 GIF 放進 images，再修改 config.js 的 processImages，例如：
+'手拉胚': 'images/pottery-process.gif'
+建議檔案小於 5MB、橫式寬度約 800–1200px，避免手機載入太慢。
+設定留空 '' 即不顯示過程圖片。GIF 有播放／暫停按鈕，減少動態效果模式下預設不播放。
+上傳更新時務必包含新增的 notices.js。
