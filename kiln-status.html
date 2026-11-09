@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>陶藝作品進度｜嘉義梅山太平</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="kiln-batches.js" defer></script>
+  <script src="kiln-status.js" defer></script>
+</head>
+<body>
+  <header><a href="index.html" class="brand">嘉義梅山太平 <small>CRAFT &amp; SLOW</small></a><span>用雙手，留下一點美好。</span></header>
+  <main class="kiln-page">
+    <a class="kiln-back" href="index.html">← 回體驗預約</a>
+    <section class="kiln-panel" aria-labelledby="kiln-title">
+      <span class="eyebrow">POTTERY PROGRESS</span>
+      <h1 id="kiln-title">陶藝作品燒製進度</h1>
+      <p>輸入體驗結束後收到的查詢碼，即可查看作品所在批次的燒製進度。</p>
+      <form id="kiln-lookup">
+        <label for="kiln-code">燒製查詢碼</label>
+        <div class="kiln-controls">
+          <input id="kiln-code" required maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="kiln-help">
+          <button class="primary" type="submit">查詢進度</button>
+        </div>
+        <p id="kiln-help" class="kiln-note">同一批作品共用查詢碼。請勿輸入姓名或電話。</p>
+      </form>
+      <p id="kiln-message" role="status"></p>
+      <div id="kiln-result" class="kiln-result" hidden>
+        <ol id="kiln-stages" class="kiln-stages" aria-label="燒製階段"></ol>
+        <p class="kiln-note">最後更新 <time id="kiln-updated"></time></p>
+      </div>
+      <p class="kiln-note">作品依批次安排燒製，實際取件或寄送時間以陶藝現場通知為準。</p>
+    </section>
+  </main>
+</body>
+</html>
