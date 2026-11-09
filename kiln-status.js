@@ -6,6 +6,12 @@ const kilnStages = [
   ['complete', '燒製完成']
 ];
 
+const shippingStages = [
+  ...kilnStages,
+  ['awaiting-shipment', '待寄送'],
+  ['shipping', '寄送中，請留意包裹']
+];
+
 const kilnLookup = document.getElementById('kiln-lookup');
 const kilnCode = document.getElementById('kiln-code');
 const kilnMessage = document.getElementById('kiln-message');
@@ -22,7 +28,7 @@ kilnLookup.addEventListener('submit', event => {
   event.preventDefault();
   const code = kilnCode.value.trim().toUpperCase();
   const batch = Object.hasOwn(kilnBatches, code) ? kilnBatches[code] : null;
-  const current = kilnStages.findIndex(([stage]) => stage === batch?.stage);
+  const current = shippingStages.findIndex(([stage]) => stage === batch?.stage);
 
   if (current === -1) {
     kilnMessage.textContent = '查不到這個批次。請確認查詢碼，或向陶藝現場詢問。';
@@ -30,7 +36,8 @@ kilnLookup.addEventListener('submit', event => {
     return;
   }
 
-  kilnTimeline.replaceChildren(...kilnStages.map(([, label], index) => {
+  const visibleStages = current < kilnStages.length ? kilnStages : shippingStages;
+  kilnTimeline.replaceChildren(...visibleStages.map(([, label], index) => {
     const item = document.createElement('li');
     item.textContent = label;
     if (index === current) item.setAttribute('aria-current', 'step');
@@ -38,6 +45,6 @@ kilnLookup.addEventListener('submit', event => {
   }));
   kilnUpdated.dateTime = batch.updated;
   kilnUpdated.textContent = batch.updated;
-  kilnMessage.textContent = '目前進度：' + kilnStages[current][1];
+  kilnMessage.textContent = '目前進度：' + visibleStages[current][1];
   kilnResult.hidden = false;
 });

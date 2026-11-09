@@ -28,7 +28,7 @@
 ## 陶藝燒製進度
 
 1. 和陶藝老師約定批次，給同一批作品使用同一個查詢碼，例如 `KILN-AB7Q`。體驗結束時可寫在小卡上，讓遊客從預約首頁進入查詢頁。
-2. 在 `kiln-batches.js` 加入該批資料，例如 `'KILN-AB7Q': { stage: 'waiting', updated: '2026-11-09' },`。日期用 `YYYY-MM-DD`。狀態可填 `drying`（乾燥中）、`waiting`（等待排窯）、`firing`（燒製中）、`inspection`（出窯檢查）、`complete`（燒製完成）。
+2. 在 `kiln-batches.js` 加入該批資料，例如 `'KILN-AB7Q': { stage: 'waiting', updated: '2026-11-09' },`。日期用 `YYYY-MM-DD`。狀態可填 `drying`（乾燥中）、`waiting`（等待排窯）、`firing`（燒製中）、`inspection`（出窯檢查）、`complete`（燒製完成）。整批準備寄送時可填 `awaiting-shipment`（待寄送），交寄後可填 `shipping`（寄送中，請留意包裹）。同批作品若有自取或分開寄送，可保留「燒製完成」，個別通知寄送進度。
 3. 收到老師的進度更新時，修改該批狀態和日期，提交到 GitHub，等 Vercel 部署完成。可先在本機開啟 `kiln-status.html` 核對。首次上線前請加入真實批次。
 
 `kiln-batches.js` 是公開網站檔案，查詢碼只用來找到批次。檔案只放批次查詢碼、燒製狀態和更新日期。姓名、電話、寄送地址及批次對應的遊客名單留在原本的紙本流程。
