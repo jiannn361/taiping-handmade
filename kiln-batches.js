@@ -2,5 +2,5 @@
 // 可用狀態：drying、waiting、firing、inspection、complete。
 // 格式範例（上線前請以真實批次資料取代）：
 // 'KILN-AB7Q': { stage: 'waiting', updated: '2026-11-09' },
-const kilnBatches = {
+const kilnBatches = {'KILN-AA26': { stage: 'firing', updated: '2026-11-09' },
 };
