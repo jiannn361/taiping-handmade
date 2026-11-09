@@ -38,6 +38,44 @@
 .kiln-note{font-size:13px;color:#575c50}
 #kiln-message{font-weight:700}
 .kiln-result{border-block:1px solid var(--line);padding:12px 0}
-.kiln-stages{margin:0;padding-left:26px}
-.kiln-stages li{padding:5px 8px}
-.kiln-stages li[aria-current=step]{background:#e6ece1;color:var(--green);font-weight:700;border-radius:4px}
+.kiln-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.kiln-stages li {
+  position: relative;
+  padding: 10px 0 10px 34px;
+}
+.kiln-stages li::before,
+.kiln-stages li::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  transform: translateX(-50%);
+}
+.kiln-stages li::before {
+  inset-block: 0;
+  width: 2px;
+  background: var(--line);
+}
+.kiln-stages li:first-child::before { top: 50%; }
+.kiln-stages li:last-child::before { bottom: 50%; }
+.kiln-stages li::after {
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #77796f;
+  border-radius: 50%;
+  background: #fffefa;
+}
+.kiln-stages li[aria-current=step] {
+  color: var(--green);
+  font-weight: 700;
+}
+.kiln-stages li[aria-current=step]::after {
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 0 0 4px #dce7d6;
+}
