@@ -1,7 +1,7 @@
 import '../config.js';
 import '../holidays.js';
 import availability from '../availability.js';
-import { bookingCode, bookings, json, matchesSecret, sheetsConfigured } from '../_server/booking-store.mjs';
+import { bookingCode, bookings, hexKey, json, matchesSecret, settingIssue, sheetsSetupIssues } from '../_server/booking-store.mjs';
 
 const experiences = ['手拉胚', '陶杯刻畫', '植物槌染'];
 const requestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -34,15 +34,21 @@ async function save(request) {
 
 export default {
   async fetch(request) {
-    const adminKey = process.env.BOOKING_ADMIN_KEY ?? '';
-    if (!/^[0-9a-f]{64}$/i.test(adminKey) || !sheetsConfigured() ||
-        !process.env.LINE_CHANNEL_SECRET || !process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+    const issues = [
+      ...sheetsSetupIssues(),
+      settingIssue('BOOKING_ADMIN_KEY', hexKey),
+      settingIssue('LINE_CHANNEL_SECRET'),
+      settingIssue('LINE_CHANNEL_ACCESS_TOKEN')
+    ].filter(Boolean);
+    if (issues.length) {
+      console.warn(`Booking setup: ${issues.join(', ')}`);
       return json({ error: '預約系統尚未完成設定。' }, 503);
     }
 
     try {
       if (request.method === 'POST') return await save(request);
       if (request.method !== 'GET' && request.method !== 'PATCH') return json({}, 405);
+      const adminKey = process.env.BOOKING_ADMIN_KEY.trim();
       if (!matchesSecret(request.headers.get('authorization') ?? '', `Bearer ${adminKey}`)) return json({}, 401);
 
       const code = new URL(request.url).searchParams.get('code')?.trim().toUpperCase();

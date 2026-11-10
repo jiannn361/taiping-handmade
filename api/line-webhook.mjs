@@ -4,7 +4,7 @@ import { bookingCode, bookings, json, matchesSecret } from '../_server/booking-s
 const bookingMessage = new RegExp(`^(?:預約編號[：:\\s]*)?(${bookingCode})$`, 'i');
 
 async function displayName(userId) {
-  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
   if (!token) return null;
   try {
     const response = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
@@ -20,7 +20,7 @@ async function displayName(userId) {
 }
 
 async function replyBookingCard(replyToken, booking) {
-  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
   if (!token) throw new Error('Missing LINE access token');
   const card = {
     type: 'flex',
@@ -59,7 +59,7 @@ async function replyBookingCard(replyToken, booking) {
 export default {
   async fetch(request) {
     if (request.method !== 'POST') return json({}, 405);
-    const secret = process.env.LINE_CHANNEL_SECRET;
+    const secret = process.env.LINE_CHANNEL_SECRET?.trim();
     if (!secret) return json({}, 503);
     const body = Buffer.from(await request.arrayBuffer());
     const signature = createHmac('sha256', secret).update(body).digest('base64');

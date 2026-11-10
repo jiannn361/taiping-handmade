@@ -11,16 +11,27 @@ export function matchesSecret(actual, expected) {
   return timingSafeEqual(digest(actual), digest(expected));
 }
 
-export function sheetsConfigured() {
-  return /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(process.env.BOOKING_SHEETS_URL ?? '') &&
-    /^[0-9a-f]{64}$/i.test(process.env.BOOKING_SHEETS_SECRET ?? '');
+export const hexKey = /^[0-9a-f]{64}$/i;
+
+export function settingIssue(name, pattern) {
+  const value = process.env[name]?.trim();
+  if (!value) return `${name}: missing`;
+  if (pattern && !pattern.test(value)) return `${name}: invalid format`;
+  return null;
+}
+
+export function sheetsSetupIssues() {
+  return [
+    settingIssue('BOOKING_SHEETS_URL', /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/),
+    settingIssue('BOOKING_SHEETS_SECRET', hexKey)
+  ].filter(Boolean);
 }
 
 export async function bookings(action, data) {
-  if (!sheetsConfigured()) throw new Error('Missing Google Sheets setup');
+  if (sheetsSetupIssues().length) throw new Error('Missing Google Sheets setup');
   const payload = JSON.stringify({ action, data, sentAt: Date.now() });
-  const signature = createHmac('sha256', process.env.BOOKING_SHEETS_SECRET).update(payload).digest('base64');
-  const url = process.env.BOOKING_SHEETS_URL;
+  const signature = createHmac('sha256', process.env.BOOKING_SHEETS_SECRET.trim()).update(payload).digest('base64');
+  const url = process.env.BOOKING_SHEETS_URL.trim();
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -39,6 +39,8 @@
 4. 確認 `config.js` 裡的 `officialAccount` 是工作室的官方帳號。在 LINE Developers 的 Messaging API 頁面，把 Webhook URL 設成 `https://你的正式網站/api/line-webhook`，按 Verify，再啟用 Use webhook 和 Webhook redelivery。如果官方帳號已有其他系統接收 Webhook，先把兩套處理整合到同一接收端。
 5. 用測試帳號提交一筆預約，核對試算表新增一列。到官方 LINE 送出預約編號，核對同一列填上 LINE 收到時間及可取得的暱稱，並收到含日期、時間及體驗項目的小卡。
 
+若畫面顯示「預約系統尚未完成設定」，請到 Vercel 專案的 Logs，找 `/api/bookings` 的 `Booking setup` 紀錄。`missing` 代表該部署未讀到設定，`invalid format` 代表格式未通過檢查。紀錄只會列出設定名稱。修改 Production 環境變數後，請重新部署正式版本。
+
 管理名單時可修改「預約狀態」。檢視不同場次請用篩選器檢視畫面，讓程式寫入時的列順序維持固定。分頁名稱和欄位順序供程式使用。
 
 上線前，請在表單補上工作室的正式個資告知內容和聯絡方式，定義已結案資料的清理期限，並在 Vercel 對 `/api/bookings` 的公開 POST 設定防濫用限制。原 LINE 記事本資料需按實際需求手動核對。此版本的管理金鑰只供單一管理者使用。
