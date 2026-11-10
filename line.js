@@ -26,11 +26,14 @@ async function connectBookingLine() {
   }
 }
 
-async function sendBookingCode(code) {
+async function sendBookingToLine(code, booking) {
   const client = await lineClient;
   if (!client) return false;
   try {
-    await client.sendMessages([{ type: 'text', text: `預約編號 ${code}` }]);
+    await client.sendMessages([
+      { type: 'text', text: `預約編號 ${code}（已附小卡）` },
+      bookingCard(booking)
+    ]);
     return true;
   } catch {
     return false;
@@ -92,7 +95,7 @@ function showBookingCode(code) {
   $('save-booking').hidden = true;
   $('message').textContent = `預約編號：${code}`;
   $('status').textContent = sentToLine
-    ? '申請已存檔，預約編號已傳回原聊天室。請回官方 LINE 查看小卡。'
+    ? '申請已存檔，預約小卡已傳回原聊天室。請回官方 LINE 查看。'
     : '申請已存檔。請開啟官方 LINE 並按送出，讓工作室確認預約。';
 }
 
@@ -120,7 +123,7 @@ $('save-booking').addEventListener('click', async () => {
     }
     bookingAttempt.code = result.code;
     $('status').textContent = '申請已存檔，正在嘗試傳回 LINE 聊天室。';
-    bookingAttempt.sentToLine = await sendBookingCode(result.code);
+    bookingAttempt.sentToLine = await sendBookingToLine(result.code, bookingAttempt.booking);
     if ($('review').open) showBookingCode(result.code);
   } catch {
     $('status').textContent = '預約儲存結果未確認，請重試。';

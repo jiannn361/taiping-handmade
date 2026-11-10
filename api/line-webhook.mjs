@@ -1,7 +1,8 @@
 import { createHmac } from 'node:crypto';
+import bookingCard from '../booking-card.js';
 import { bookingCode, bookings, json, matchesSecret } from '../_server/booking-store.mjs';
 
-const bookingMessage = new RegExp(`^(?:預約編號[：:\\s]*)?(${bookingCode})$`, 'i');
+const bookingMessage = new RegExp(`^(?:預約編號[：:\\s]*)?(${bookingCode})(（已附小卡）)?$`, 'i');
 
 async function displayName(userId) {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
@@ -22,29 +23,10 @@ async function displayName(userId) {
 async function replyBookingCard(replyToken, booking) {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
   if (!token) throw new Error('Missing LINE access token');
-  const card = {
-    type: 'flex',
-    altText: `預約申請｜${booking.experience}｜${booking.date} ${booking.time}`,
-    contents: {
-      type: 'bubble',
-      body: {
-        type: 'box', layout: 'vertical', spacing: 'md',
-        contents: [
-          { type: 'text', text: '已收到預約申請', weight: 'bold', size: 'lg', color: '#425743' },
-          { type: 'separator' },
-          { type: 'text', text: `體驗：${booking.experience}`, wrap: true },
-          { type: 'text', text: `日期：${booking.date}`, wrap: true },
-          { type: 'text', text: `時間：${booking.time}`, wrap: true },
-          { type: 'text', text: `人數：${booking.people} 人`, wrap: true },
-          { type: 'text', text: '工作室回覆確認後，預約才正式成立。', wrap: true, size: 'sm', color: '#666666' }
-        ]
-      }
-    }
-  };
   const response = await fetch('https://api.line.me/v2/bot/message/reply', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ replyToken, messages: [card] }),
+    body: JSON.stringify({ replyToken, messages: [bookingCard(booking)] }),
     signal: AbortSignal.timeout(5000)
   });
   if (!response.ok) {
@@ -70,11 +52,12 @@ export default {
       for (const event of events) {
         if (event.type !== 'message' || event.message?.type !== 'text' || event.source?.type !== 'user') continue;
         const userId = event.source.userId;
-        const code = event.message.text?.trim().match(bookingMessage)?.[1]?.toUpperCase();
+        const match = event.message.text?.trim().match(bookingMessage);
+        const code = match?.[1].toUpperCase();
         if (!code || typeof userId !== 'string' || !/^U[0-9a-f]{32}$/.test(userId) || !Number.isSafeInteger(event.timestamp)) continue;
 
         const booking = await bookings('link', { code, userId, displayName: await displayName(userId), timestamp: event.timestamp });
-        if (booking && event.replyToken) await replyBookingCard(event.replyToken, booking);
+        if (booking && event.replyToken && !match[2]) await replyBookingCard(event.replyToken, booking);
       }
       return json({ ok: true });
     } catch {
