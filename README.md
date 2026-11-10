@@ -41,6 +41,8 @@
 
 若畫面顯示「預約系統尚未完成設定」，請到 Vercel 專案的 Logs，找 `/api/bookings` 的 `Booking setup` 紀錄。`missing` 代表該部署未讀到設定，`invalid format` 代表格式未通過檢查。紀錄只會列出設定名稱。修改 Production 環境變數後，請重新部署正式版本。
 
+若顯示「暫時無法處理預約」，在同一頁 Logs 搜尋 `Booking Sheets (create)`。`google_access_denied` 代表 Google 拒絕存取，請核對網頁應用程式的部署權限。`script_rejected` 表示舊版 Apps Script 回傳了未細分的錯誤。要取得細節，請貼上最新版 `Bookings.gs`，在「部署 → 管理部署作業」編輯原部署並選「新版本」。新版可區分 `signature_mismatch`（兩邊金鑰不同）、`sheet_not_initialized`（需執行 `setupBookingSheet`）及分頁或標題列錯誤。紀錄只顯示錯誤類別。
+
 管理名單時可修改「預約狀態」。檢視不同場次請用篩選器檢視畫面，讓程式寫入時的列順序維持固定。分頁名稱和欄位順序供程式使用。
 
 上線前，請在表單補上工作室的正式個資告知內容和聯絡方式，定義已結案資料的清理期限，並在 Vercel 對 `/api/bookings` 的公開 POST 設定防濫用限制。原 LINE 記事本資料需按實際需求手動核對。此版本的管理金鑰只供單一管理者使用。

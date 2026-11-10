@@ -11,7 +11,7 @@ function setupBookingSheet() {
     sheet.getRange(1, 1, 1, BOOKING_HEADERS.length).setValues([BOOKING_HEADERS]).setFontWeight('bold');
     sheet.setFrozenRows(1);
   }
-  checkHeaders(sheet);
+  if (!hasBookingHeaders(sheet)) throw new Error('Unexpected columns');
   PropertiesService.getScriptProperties().setProperty('BOOKING_SPREADSHEET_ID', spreadsheet.getId());
 }
 
@@ -21,21 +21,25 @@ function doPost(event) {
     if (body.length > 4096) return output({ ok: false });
     const { payload, signature } = JSON.parse(body);
     const props = PropertiesService.getScriptProperties();
-    const secret = props.getProperty('BOOKING_SHEETS_SECRET');
-    if (!secret || typeof payload !== 'string' || typeof signature !== 'string') return output({ ok: false });
+    if (typeof payload !== 'string' || typeof signature !== 'string') return output({ ok: false });
+    const secret = props.getProperty('BOOKING_SHEETS_SECRET')?.trim();
+    if (!secret) return output({ ok: false, reason: 'script_secret_missing' });
     const expected = Utilities.base64Encode(Utilities.computeHmacSha256Signature(payload, secret));
     if (signature.length !== expected.length) return output({ ok: false });
     let difference = 0;
     for (let i = 0; i < expected.length; i++) difference |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
-    if (difference) return output({ ok: false });
+    if (difference) return output({ ok: false, reason: 'signature_mismatch' });
     const { action, data, sentAt } = JSON.parse(payload);
     if (!Number.isInteger(sentAt) || Math.abs(Date.now() - sentAt) > 90000) return output({ ok: false });
 
     const lock = LockService.getScriptLock();
     lock.waitLock(4000);
     try {
-      const sheet = SpreadsheetApp.openById(props.getProperty('BOOKING_SPREADSHEET_ID')).getSheetByName(BOOKING_TAB);
-      checkHeaders(sheet);
+      const spreadsheetId = props.getProperty('BOOKING_SPREADSHEET_ID');
+      if (!spreadsheetId) return output({ ok: false, reason: 'sheet_not_initialized' });
+      const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(BOOKING_TAB);
+      if (!sheet) return output({ ok: false, reason: 'sheet_tab_missing' });
+      if (!hasBookingHeaders(sheet)) return output({ ok: false, reason: 'sheet_headers_changed' });
       const result = runBookingAction(sheet, action, data);
       SpreadsheetApp.flush();
       return output({ ok: true, data: result });
@@ -43,7 +47,7 @@ function doPost(event) {
       lock.releaseLock();
     }
   } catch {
-    return output({ ok: false });
+    return output({ ok: false, reason: 'script_failed' });
   }
 }
 
@@ -51,9 +55,9 @@ function output(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function checkHeaders(sheet) {
+function hasBookingHeaders(sheet) {
   const headers = sheet.getRange(1, 1, 1, BOOKING_HEADERS.length).getDisplayValues()[0];
-  if (headers.some((header, index) => header !== BOOKING_HEADERS[index])) throw new Error('Unexpected columns');
+  return BOOKING_HEADERS.every((header, index) => header === headers[index]);
 }
 
 function findBookingRow(sheet, code) {

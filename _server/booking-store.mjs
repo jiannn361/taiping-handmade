@@ -37,9 +37,30 @@ export async function bookings(action, data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ payload, signature }),
     signal: AbortSignal.timeout(15000)
+  }).catch(error => {
+    console.warn(`Booking Sheets (${action}): ${error.name === 'TimeoutError' ? 'request_timeout' : 'connection_failed'}`);
+    throw new Error('Google Sheets connection failed');
   });
-  if (!response.ok) throw new Error('Google Sheets request failed');
-  const result = await response.json();
-  if (!result.ok) throw new Error('Google Sheets request rejected');
+  if (response.url.startsWith('https://accounts.google.com/') || [401, 403].includes(response.status)) {
+    console.warn(`Booking Sheets (${action}): google_access_denied`);
+    throw new Error('Google Sheets access denied');
+  }
+  if (!response.ok) {
+    console.warn(`Booking Sheets (${action}): HTTP ${response.status}`);
+    throw new Error('Google Sheets request failed');
+  }
+  const result = await response.json().catch(() => {
+    console.warn(`Booking Sheets (${action}): unexpected_response`);
+    throw new Error('Unexpected Google Sheets response');
+  });
+  if (!result?.ok) {
+    console.warn(`Booking Sheets (${action}): ${scriptFailureReason(result?.reason)}`);
+    throw new Error('Google Sheets request rejected');
+  }
   return result.data;
+}
+
+function scriptFailureReason(reason) {
+  const known = ['script_secret_missing', 'signature_mismatch', 'sheet_not_initialized', 'sheet_tab_missing', 'sheet_headers_changed', 'script_failed'];
+  return known.includes(reason) ? reason : 'script_rejected';
 }
