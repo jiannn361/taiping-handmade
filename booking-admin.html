@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>預約管理｜嘉義梅山太平</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="booking-admin.js" defer></script>
+</head>
+<body>
+  <header><a href="index.html" class="brand">嘉義梅山太平 <small>CRAFT &amp; SLOW</small></a></header>
+  <main class="kiln-page">
+    <section class="kiln-panel" aria-labelledby="admin-title">
+      <h1 id="admin-title">預約管理</h1>
+      <form id="admin-login" class="fields">
+        <label for="admin-key">管理金鑰</label>
+        <input id="admin-key" type="password" autocomplete="current-password" required maxlength="64">
+        <button class="primary" type="submit">進入管理頁</button>
+      </form>
+      <div id="admin-panel" hidden>
+        <form id="admin-search" class="fields">
+          <label for="admin-code">預約編號</label>
+          <input id="admin-code" type="search" maxlength="35" placeholder="留空查看最近 50 筆">
+          <button class="primary" type="submit">查詢或更新名單</button>
+        </form>
+        <button id="admin-logout" class="secondary" type="button">登出</button>
+        <div id="admin-results"></div>
+      </div>
+      <p id="admin-status" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>

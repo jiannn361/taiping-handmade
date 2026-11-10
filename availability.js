@@ -1,3 +1,5 @@
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+
 function bookingDateReason(value,config,now,experience){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return '請從日曆選擇預約日期。';
   const date=new Date(value+'T12:00:00+08:00');
@@ -21,4 +23,6 @@ function allowedBookingTimes(value,experience){
  if(['手拉胚','陶杯刻畫'].includes(experience)&&[0,6].includes(day))return ['15:00','15:30','16:00'];
  return Array.from({length:13},(_,i)=>{const m=600+i*30;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');});
 }
+
+if (typeof module !== 'undefined') module.exports = {today, bookingDateReason, allowedBookingTimes};
 

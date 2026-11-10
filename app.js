@@ -1,14 +1,9 @@
 const $=id=>document.getElementById(id);
-const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 $('date').min=today();
 const money=n=>'NT$ '+n.toLocaleString('en-US');
 function selection(){return document.querySelector('[name=experience]:checked');}
 function update(){const item=selection(),n=Number($('people').value);$('sum-exp').textContent=item.value;$('sum-location').textContent=item.dataset.location;$('sum-people').textContent=Number.isInteger(n)&&n>0?n+' 人':'請填寫人數';$('sum-date').textContent=[$('date').value,$('time').value].filter(Boolean).join(' · ')||'尚未選擇';$('total').textContent=money(Number(item.dataset.price)*(Number.isInteger(n)&&n>0?n:0));}
 $('form').addEventListener('input',update);update();
-let summary='',sent=false,liffReady=false;
-$('form').addEventListener('submit',e=>{e.preventDefault();if(!validateBookingDate())return;if(!$('form').reportValidity())return;if(!validateBookingTime())return;if(!$('name').value.trim()){$('name').setCustomValidity('請填寫姓名');$('name').reportValidity();return;}const i=selection();summary=['【手作體驗預約申請】','體驗：'+i.value,'地點：'+i.dataset.location,'日期：'+$('date').value,'希望時間：'+$('time').value,'人數：'+$('people').value+' 人','姓名：'+$('name').value.trim(),'手機：'+$('phone').value.trim(),'預估費用：'+money(Number(i.dataset.price)*Number($('people').value)),'※ 待工作室回覆確認後，預約才成立。'].join('\n');sent=false;$('message').textContent=summary;$('copy').textContent='複製預約摘要';$('send').disabled=false;$('send').textContent='傳送至 LINE 聊天室';$('status').textContent=liffReady?'尚未傳送，請確認後按下傳送。':'尚未傳送。請複製摘要並貼至工作室 LINE 聊天室。';captureBooking();$('status').textContent=lineStatusMessage();$('review').showModal();});
-$('name').addEventListener('input',()=>$('name').setCustomValidity(''));
-$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(summary);$('copy').textContent='已複製';$('status').textContent='已複製，請貼到工作室 LINE 聊天室並送出。';}catch{$('status').textContent='無法自動複製，請選取上方摘要並手動複製。';}};
 
 
 

@@ -1,2 +1,4 @@
 _previous_versions/
 *.zip
+.env*
+.vercel/

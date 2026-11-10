@@ -1,6 +1,6 @@
 # 手作體驗預約網站
 
-將本資料夾內容上傳到 GitHub 儲存庫根目錄，首頁為 index.html，無須安裝或編譯。
+首頁為 `index.html`。頁面可直接預覽，儲存預約與 LINE 配對需透過 Vercel 的伺服器功能。
 
 ## 自己放圖片
 
@@ -18,12 +18,30 @@
 - app.js 的 notesByExperience：各體驗注意事項。
 - style.css：配色及版面。
 
-## LINE
+## 預約管理與官方 LINE 配對
 
-上線後，將網站 HTTPS 正式網址填入 LIFF Endpoint URL，啟用 chat_message.write 權限。
-從官方帳號聊天室使用 https://liff.line.me/2009010332-H3eAyCZD 開啟並測試。
-目前沒有預約資料庫，預約摘要傳回開啟 LIFF 的聊天室，由工作室回覆確認。
-不要在網站檔案放入 channel secret 或 access token。
+遊客先儲存申請，再點「到官方 LINE 傳送預約編號」並按送出。收到私聊訊息後，系統更新 Google 試算表的 LINE 欄位，並在原聊天室回傳小卡，顯示體驗項目、日期、時間、人數和預約編號。你可以直接用私人試算表管理，也可以登入 `/booking-admin.html` 查詢。回覆確認後，在「預約狀態」填「已確認」，或用管理頁的確認按鈕。配對以第一筆有效私聊訊息為準，預約建立後七天內可配對。預約編號與燒製批次碼分開使用。
+
+### 第一次設定
+
+1. 在自己的 Google Drive 新建一份私人空白試算表，命名「手作體驗預約名單」，共用存取設為「限制」。從「擴充功能 → Apps Script」開啟編輯器，用 `google-sheets/Bookings.gs` 的內容取代預設程式碼並儲存。選擇 `setupBookingSheet` 後按「執行」，依畫面授權。程式會建立「預約名單」分頁和欄位。
+2. 在 Apps Script 的「專案設定 → 指令碼屬性」新增 `BOOKING_SHEETS_SECRET`。用下方指令產生一組 64 位十六進位金鑰，保存在密碼管理器。再選「部署 → 新增部署作業 → 網頁應用程式」，執行身分選「我」，存取對象選可供未登入者呼叫的「任何人」，並複製結尾是 `/exec` 的部署網址。這個網址只接受 Vercel 簽名的請求，試算表本身維持私人。
+3. 在 Vercel 專案的正式環境設定下列變數，再部署新版程式。試算表金鑰填入 Apps Script 設定的同一組，管理金鑰另產生一組。各組金鑰都透過服務的設定頁輸入。
+
+   | 設定名稱 | 填寫內容 |
+   | --- | --- |
+   | `BOOKING_SHEETS_URL` | Apps Script 的 `/exec` 部署網址 |
+   | `BOOKING_SHEETS_SECRET` | Apps Script 指令碼屬性中的同一組金鑰 |
+   | `BOOKING_ADMIN_KEY` | 專供工作室使用的 64 位十六進位管理金鑰。可用 `node -p "require('node:crypto').randomBytes(32).toString('hex')"` 產生 |
+   | `LINE_CHANNEL_SECRET` | 官方帳號的 **Messaging API** Channel secret |
+   | `LINE_CHANNEL_ACCESS_TOKEN` | 同一個 Messaging API Channel 的 Access token，用來回傳小卡與取得 LINE 暱稱 |
+
+4. 確認 `config.js` 裡的 `officialAccount` 是工作室的官方帳號。在 LINE Developers 的 Messaging API 頁面，把 Webhook URL 設成 `https://你的正式網站/api/line-webhook`，按 Verify，再啟用 Use webhook 和 Webhook redelivery。如果官方帳號已有其他系統接收 Webhook，先把兩套處理整合到同一接收端。
+5. 用測試帳號提交一筆預約，核對試算表新增一列。到官方 LINE 送出預約編號，核對同一列填上 LINE 收到時間及可取得的暱稱，並收到含日期、時間及體驗項目的小卡。
+
+管理名單時可修改「預約狀態」。檢視不同場次請用篩選器檢視畫面，讓程式寫入時的列順序維持固定。分頁名稱和欄位順序供程式使用。
+
+上線前，請在表單補上工作室的正式個資告知內容和聯絡方式，定義已結案資料的清理期限，並在 Vercel 對 `/api/bookings` 的公開 POST 設定防濫用限制。原 LINE 記事本資料需按實際需求手動核對。此版本的管理金鑰只供單一管理者使用。
 
 ## 陶藝燒製進度
 
