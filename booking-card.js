@@ -1,9 +1,14 @@
+function shortBookingCode(code) {
+  return `BK-${code.slice(-12)}`;
+}
+
 function bookingCard(booking) {
   const rows = [
     ['體驗', booking.experience],
     ['日期', booking.date],
     ['希望時間', booking.time],
-    ['人數', `${booking.people} 人`]
+    ['人數', `${booking.people} 人`],
+    ['預約編號', shortBookingCode(booking.code)]
   ];
   return {
     type: 'flex',
@@ -31,4 +36,4 @@ function bookingCard(booking) {
   };
 }
 
-if (typeof module !== 'undefined') module.exports = bookingCard;
+if (typeof module !== 'undefined') module.exports = { bookingCard, shortBookingCode };

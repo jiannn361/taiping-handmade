@@ -1,4 +1,5 @@
 const BOOKING_TAB = '預約名單';
+const BOOKING_TIME_FORMAT = 'yyyy-mm-dd hh:mm:ss';
 const BOOKING_HEADERS = [
   '預約編號', '體驗項目', '預約日期', '預約時間', '人數', '姓名', '手機', '預約狀態',
   '建立時間', 'LINE 帳號識別碼', 'LINE 暱稱', 'LINE 訊息收到時間'
@@ -6,13 +7,38 @@ const BOOKING_HEADERS = [
 
 function setupBookingSheet() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = spreadsheet.getSheetByName(BOOKING_TAB) || spreadsheet.insertSheet(BOOKING_TAB);
-  if (!sheet.getLastRow()) {
-    sheet.getRange(1, 1, 1, BOOKING_HEADERS.length).setValues([BOOKING_HEADERS]).setFontWeight('bold');
-    sheet.setFrozenRows(1);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = spreadsheet.getSheetByName(BOOKING_TAB) || spreadsheet.insertSheet(BOOKING_TAB);
+    if (!sheet.getLastRow()) {
+      sheet.getRange(1, 1, 1, BOOKING_HEADERS.length).setValues([BOOKING_HEADERS]).setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+    if (!hasBookingHeaders(sheet)) throw new Error('Unexpected columns');
+    spreadsheet.setSpreadsheetTimeZone('Asia/Taipei');
+    updateBookingTimestamps(sheet);
+    PropertiesService.getScriptProperties().setProperty('BOOKING_SPREADSHEET_ID', spreadsheet.getId());
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
   }
-  if (!hasBookingHeaders(sheet)) throw new Error('Unexpected columns');
-  PropertiesService.getScriptProperties().setProperty('BOOKING_SPREADSHEET_ID', spreadsheet.getId());
+}
+
+function updateBookingTimestamps(sheet) {
+  const rows = sheet.getLastRow() - 1;
+  if (rows < 1) return;
+  for (const column of [9, 12]) {
+    const range = sheet.getRange(2, column, rows, 1);
+    const values = range.getValues();
+    const formulas = range.getFormulas();
+    range.setNumberFormat(BOOKING_TIME_FORMAT);
+    values.forEach(([value], index) => {
+      if (formulas[index][0] || typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return;
+      const date = new Date(value);
+      if (Number.isFinite(date.getTime())) range.getCell(index + 1, 1).setValue(date);
+    });
+  }
 }
 
 function doPost(event) {
@@ -78,14 +104,22 @@ function adminBooking(row) {
 }
 
 function runBookingAction(sheet, action, data) {
-  const rowNumber = data.code ? findBookingRow(sheet, data.code) : null;
   const lastRow = sheet.getLastRow();
+  if (action === 'list' && /^BK-[0-9A-F]{12}$/.test(data.code)) {
+    if (lastRow < 2) return [];
+    const suffix = data.code.slice(3);
+    return sheet.getRange(2, 1, lastRow - 1, 1)
+      .createTextFinder(`BK-[0-9A-F]{20}${suffix}`).useRegularExpression(true).matchEntireCell(true).findAll()
+      .map(match => adminBooking(sheet.getRange(match.getRow(), 1, 1, BOOKING_HEADERS.length).getDisplayValues()[0]));
+  }
+  const rowNumber = data.code ? findBookingRow(sheet, data.code) : null;
   if (action === 'create') {
     if (rowNumber) return true;
     if (lastRow === sheet.getMaxRows()) sheet.insertRowsAfter(lastRow, 1);
     const range = sheet.getRange(lastRow + 1, 1, 1, BOOKING_HEADERS.length);
-    range.setNumberFormat('@').setValues([[data.code, data.experience, data.date, data.time, data.people,
-      literalText(data.name), data.phone, '待確認', new Date().toISOString(), '', '', '']]);
+    range.setNumberFormats([['@', '@', '@', '@', '@', '@', '@', '@', BOOKING_TIME_FORMAT, '@', '@', BOOKING_TIME_FORMAT]]);
+    range.setValues([[data.code, data.experience, data.date, data.time, data.people,
+      literalText(data.name), data.phone, '待確認', new Date(), '', '', '']]);
     return true;
   }
 
@@ -103,12 +137,13 @@ function runBookingAction(sheet, action, data) {
   if (action !== 'link') return null;
 
   const row = sheet.getRange(rowNumber, 1, 1, BOOKING_HEADERS.length).getDisplayValues()[0];
-  const createdAt = Date.parse(row[8]);
+  const createdValue = sheet.getRange(rowNumber, 9).getValue();
+  const createdAt = createdValue instanceof Date ? createdValue.getTime() : Date.parse(createdValue);
   if (!Number.isFinite(createdAt) || data.timestamp < createdAt || data.timestamp - createdAt > 7 * 86400000) return null;
   const linkedUser = row[9];
   if (linkedUser && linkedUser !== data.userId) return null;
   if (!linkedUser) {
-    sheet.getRange(rowNumber, 10, 1, 3).setValues([[data.userId, literalText(data.displayName || ''), new Date(data.timestamp).toISOString()]]);
+    sheet.getRange(rowNumber, 10, 1, 3).setValues([[data.userId, literalText(data.displayName || ''), new Date(data.timestamp)]]);
   }
   return { code: row[0], experience: row[1], date: row[2], time: row[3], people: Number(row[4]) };
 }

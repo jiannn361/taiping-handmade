@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import bookingCard from '../booking-card.js';
+import card from '../booking-card.js';
 import { bookingCode, bookings, json, matchesSecret } from '../_server/booking-store.mjs';
 
 const bookingMessage = new RegExp(`^(?:預約編號[：:\\s]*)?(${bookingCode})(（已附小卡）)?$`, 'i');
@@ -26,7 +26,7 @@ async function replyBookingCard(replyToken, booking) {
   const response = await fetch('https://api.line.me/v2/bot/message/reply', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ replyToken, messages: [bookingCard(booking)] }),
+    body: JSON.stringify({ replyToken, messages: [card.bookingCard(booking)] }),
     signal: AbortSignal.timeout(5000)
   });
   if (!response.ok) {

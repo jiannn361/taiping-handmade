@@ -29,15 +29,36 @@ async function connectBookingLine() {
 async function sendBookingToLine(code, booking) {
   const client = await lineClient;
   if (!client) return false;
+  const card = bookingCard({ ...booking, code });
   try {
-    await client.sendMessages([
-      { type: 'text', text: `預約編號 ${code}（已附小卡）` },
-      bookingCard(booking)
-    ]);
+    await client.sendMessages([card]);
+  } catch {
+    return false;
+  }
+
+  bookingAttempt.cardSent = true;
+  try {
+    const idToken = client.getIDToken?.();
+    if (idToken) {
+      const response = await fetch('/api/bookings?link=1', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, idToken })
+      });
+      if (response.ok) return true;
+    }
+  } catch {
+    // Use the existing LINE message pairing when token verification is unavailable.
+  }
+  try {
+    await client.sendMessages([{ type: 'text', text: pairingMessage(code) }]);
     return true;
   } catch {
     return false;
   }
+}
+
+function pairingMessage(code) {
+  return `預約編號 ${code}${bookingAttempt.cardSent ? '（已附小卡）' : ''}`;
 }
 
 $('form').addEventListener('submit', event => {
@@ -85,7 +106,7 @@ $('review').addEventListener('close', () => { $('message').textContent = ''; });
 
 function showBookingCode(code) {
   const account = encodeURIComponent(window.BOOKING_CONFIG.officialAccount);
-  const message = encodeURIComponent(`預約編號 ${code}`);
+  const message = encodeURIComponent(pairingMessage(code));
   const sentToLine = bookingAttempt.sentToLine;
   const chat = `https://line.me/R/oaMessage/${account}`;
   $('official-chat').href = sentToLine ? chat : `${chat}/?${message}`;
@@ -93,10 +114,10 @@ function showBookingCode(code) {
   $('official-chat').hidden = false;
   $('copy').hidden = Boolean(sentToLine);
   $('save-booking').hidden = true;
-  $('message').textContent = `預約編號：${code}`;
+  $('message').textContent = `預約編號：${shortBookingCode(code)}`;
   $('status').textContent = sentToLine
     ? '申請已存檔，預約小卡已傳回原聊天室。請回官方 LINE 查看。'
-    : '申請已存檔。請開啟官方 LINE 並按送出，讓工作室確認預約。';
+    : '申請已存檔。請開啟官方 LINE 並送出配對訊息，讓工作室確認預約。';
 }
 
 $('save-booking').addEventListener('click', async () => {
@@ -137,9 +158,9 @@ $('save-booking').addEventListener('click', async () => {
 $('copy').addEventListener('click', async () => {
   if (!bookingAttempt?.code) return;
   try {
-    await navigator.clipboard.writeText(`預約編號 ${bookingAttempt.code}`);
+    await navigator.clipboard.writeText(pairingMessage(bookingAttempt.code));
     $('status').textContent = '已複製預約編號，請貼到工作室官方 LINE 私聊並送出。';
   } catch {
-    $('status').textContent = '請選取上方的預約編號，複製到工作室官方 LINE 私聊並送出。';
+    $('status').textContent = '無法複製。請用「到官方 LINE 傳送預約編號」開啟私聊並送出。';
   }
 });

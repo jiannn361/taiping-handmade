@@ -17,11 +17,11 @@ function logout() {
   adminStatus.textContent = '';
 }
 
-function bookingCard(row, session) {
+function adminBookingCard(row, session) {
   const card = document.createElement('article');
   card.className = 'kiln-result';
   const heading = document.createElement('h2');
-  heading.textContent = row.code;
+  heading.textContent = shortBookingCode(row.code);
   heading.style.overflowWrap = 'anywhere';
   card.append(heading);
 
@@ -75,20 +75,46 @@ async function loadBookings(session, confirmCode) {
     if (adminSession !== session) return;
     adminLogin.hidden = true;
     adminPanel.hidden = false;
-    results.replaceChildren(...result.rows.map(row => bookingCard(row, session)));
+    results.replaceChildren(...result.rows.map(row => adminBookingCard(row, session)));
     adminStatus.textContent = result.rows.length ? `顯示 ${result.rows.length} 筆預約。` : '查無預約。';
   } catch (error) {
-    if (adminSession === session) adminStatus.textContent = error.message || '讀取失敗，請稍後重試。';
+    if (adminSession === session) {
+      adminStatus.textContent = error.message || '已登入，但名單暫時無法讀取。';
+    }
   } finally {
     session.loading = false;
   }
 }
 
-adminLogin.addEventListener('submit', event => {
+adminLogin.addEventListener('submit', async event => {
   event.preventDefault();
-  adminSession = { key: keyInput.value.trim() };
-  keyInput.value = '';
-  loadBookings(adminSession);
+  const key = keyInput.value.replace(/\s/g, '');
+  if (!/^[0-9a-f]{64}$/i.test(key)) {
+    adminStatus.textContent = '管理金鑰應是 64 個英文字母 a–f 或數字。請貼上 BOOKING_ADMIN_KEY 的值。';
+    return;
+  }
+  const session = { key };
+  adminSession = session;
+  adminStatus.textContent = '驗證管理金鑰中…';
+  try {
+    const response = await fetch('/api/bookings?check=1', {
+      headers: { Authorization: `Bearer ${key}` }, cache: 'no-store'
+    });
+    const result = await response.json().catch(() => ({}));
+    if (adminSession !== session) return;
+    if (!response.ok || !result.authenticated) {
+      adminStatus.textContent = response.status === 401
+        ? '管理金鑰不符合正式站的 BOOKING_ADMIN_KEY。'
+        : result.error || '暫時無法驗證管理金鑰，請稍後重試。';
+      return;
+    }
+    keyInput.value = '';
+    adminLogin.hidden = true;
+    adminPanel.hidden = false;
+    await loadBookings(session);
+  } catch {
+    if (adminSession === session) adminStatus.textContent = '連不到預約系統，請稍後重試。';
+  }
 });
 search.addEventListener('submit', event => {
   event.preventDefault();

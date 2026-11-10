@@ -20,9 +20,9 @@
 
 ## 預約管理與官方 LINE 配對
 
-請把官方 LINE 聊天室的預約入口設為 `https://liff.line.me/2009010332-H3eAyCZD`，並在 LIFF 開啟 `chat_message.write` 權限。遊客從這個入口開啟預約頁並儲存申請後，網站會把預約編號和小卡一起送回開啟頁面的一對一聊天室。外部瀏覽器、群組或自動送出失敗時，頁面提供「到官方 LINE 傳送預約編號」按鈕，讓遊客自行按送出。
+請把官方 LINE 聊天室的預約入口設為 `https://liff.line.me/2009010332-H3eAyCZD`，並在 LIFF 開啟 `chat_message.write` 和 `openid` 權限。`openid` 讓伺服器驗證遊客的 LINE 身分並完成配對，`profile` 可提供暱稱。遊客從這個入口開啟預約頁並儲存申請後，網站會把含短版預約編號的小卡送回開啟頁面的一對一聊天室。若無法透過 LINE 身分驗證配對，網站會再送出一則配對訊息。外部瀏覽器、群組或自動送出失敗時，頁面提供「到官方 LINE 傳送預約編號」按鈕，讓遊客自行按送出。
 
-收到官方帳號的一對一訊息後，系統更新 Google 試算表的 LINE 欄位。若遊客是手動傳送編號，官方帳號會回覆小卡。兩種小卡都顯示體驗項目、日期、時間及人數。你可以直接用私人試算表管理，也可以登入 `/booking-admin.html` 查詢。回覆確認後，在「預約狀態」填「已確認」，或用管理頁的確認按鈕。配對以第一筆有效私聊訊息為準，預約建立後七天內可配對。預約編號與燒製批次碼分開使用。
+LINE 配對成功後，系統更新 Google 試算表的 LINE 欄位。若遊客是手動傳送編號，官方帳號會回覆小卡。兩種小卡都顯示體驗項目、日期、時間、人數和短版預約編號。你可以直接用私人試算表管理，也可以在 `/booking-admin.html` 用 Vercel 的 `BOOKING_ADMIN_KEY` 登入，輸入長版或短版編號查詢。回覆確認後，在「預約狀態」填「已確認」，或用管理頁的確認按鈕。預約建立後七天內可配對。預約編號與燒製批次碼分開使用。
 
 ### 第一次設定
 
@@ -39,13 +39,15 @@
    | `LINE_CHANNEL_ACCESS_TOKEN` | 同一個 Messaging API Channel 的 Access token，用來回傳小卡與取得 LINE 暱稱 |
 
 4. 確認 `config.js` 裡的 `officialAccount` 是工作室的官方帳號。在 LINE Developers 的 Messaging API 頁面，把 Webhook URL 設成 `https://你的正式網站/api/line-webhook`，按 Verify，再啟用 Use webhook 和 Webhook redelivery。如果官方帳號已有其他系統接收 Webhook，先把兩套處理整合到同一接收端。
-5. 在手機從官方 LINE 聊天室的 LIFF 連結提交一筆測試預約，核對試算表新增一列、原聊天室自動出現預約編號、同一列填上 LINE 收到時間及可取得的暱稱，並收到含體驗項目、日期、時間及人數的小卡。
+5. 在手機從官方 LINE 聊天室的 LIFF 連結提交一筆測試預約，核對試算表新增一列、原聊天室收到含短版預約編號的小卡、同一列填上 LINE 時間及可取得的暱稱。用管理頁查詢小卡上的短版預約編號，確認找到同一筆預約。
 
 若畫面顯示「預約系統尚未完成設定」，請到 Vercel 專案的 Logs，找 `/api/bookings` 的 `Booking setup` 紀錄。`missing` 代表該部署未讀到設定，`invalid format` 代表格式未通過檢查。紀錄只會列出設定名稱。修改 Production 環境變數後，請重新部署正式版本。
 
 若顯示「暫時無法處理預約」，在同一頁 Logs 搜尋 `Booking Sheets (create)`。`google_access_denied` 代表 Google 拒絕存取，請核對網頁應用程式的部署權限。`script_rejected` 表示舊版 Apps Script 回傳了未細分的錯誤。要取得細節，請貼上最新版 `Bookings.gs`，在「部署 → 管理部署作業」編輯原部署並選「新版本」。新版可區分 `signature_mismatch`（兩邊金鑰不同）、`sheet_not_initialized`（需執行 `setupBookingSheet`）及分頁或標題列錯誤。紀錄只顯示錯誤類別。
 
 管理名單時可修改「預約狀態」。檢視不同場次請用篩選器檢視畫面，讓程式寫入時的列順序維持固定。分頁名稱和欄位順序供程式使用。
+
+「建立時間」和「LINE 訊息收到時間」以台灣時間顯示。若是從舊版更新，請在 Apps Script 貼上最新版 `Bookings.gs` 並執行一次 `setupBookingSheet`，轉換舊有 UTC 時間。接著編輯原網頁應用程式部署，選「新版本」並部署，讓後續的預約也使用同一格式。
 
 上線前，請在表單補上工作室的正式個資告知內容和聯絡方式，定義已結案資料的清理期限，並在 Vercel 對 `/api/bookings` 的公開 POST 設定防濫用限制。原 LINE 記事本資料需按實際需求手動核對。此版本的管理金鑰只供單一管理者使用。
 
