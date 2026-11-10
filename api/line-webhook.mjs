@@ -36,7 +36,6 @@ async function replyBookingCard(replyToken, booking) {
           { type: 'text', text: `日期：${booking.date}`, wrap: true },
           { type: 'text', text: `時間：${booking.time}`, wrap: true },
           { type: 'text', text: `人數：${booking.people} 人`, wrap: true },
-          { type: 'text', text: `預約編號：${booking.code}`, wrap: true, size: 'sm' },
           { type: 'text', text: '工作室回覆確認後，預約才正式成立。', wrap: true, size: 'sm', color: '#666666' }
         ]
       }
