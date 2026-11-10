@@ -29,12 +29,14 @@ export function sheetsSetupIssues() {
 
 export async function bookings(action, data) {
   if (sheetsSetupIssues().length) throw new Error('Missing Google Sheets setup');
-  const payload = JSON.stringify({ action, data, sentAt: Date.now() });
+  // Sign an ASCII JSON string so both runtimes see the same bytes, even with Chinese names or emoji.
+  const payload = JSON.stringify({ action, data, sentAt: Date.now() }).replace(/[^\x00-\x7f]/g,
+    character => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0'));
   const signature = createHmac('sha256', process.env.BOOKING_SHEETS_SECRET.trim()).update(payload).digest('base64');
   const url = process.env.BOOKING_SHEETS_URL.trim();
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ payload, signature }),
     signal: AbortSignal.timeout(15000)
   }).catch(error => {

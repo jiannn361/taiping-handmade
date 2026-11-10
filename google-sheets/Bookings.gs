@@ -67,7 +67,8 @@ function findBookingRow(sheet, code) {
 }
 
 function literalText(value) {
-  return /^[\s]*[=+\-@']/.test(value) ? "'" + value : value;
+  const firstCharacter = value.trimStart().charAt(0);
+  return firstCharacter && "=+-@'".includes(firstCharacter) ? "'" + value : value;
 }
 
 function adminBooking(row) {
