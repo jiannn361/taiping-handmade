@@ -57,6 +57,7 @@ function doPost(event) {
     if (difference) return output({ ok: false, reason: 'signature_mismatch' });
     const { action, data, sentAt } = JSON.parse(payload);
     if (!Number.isInteger(sentAt) || Math.abs(Date.now() - sentAt) > 90000) return output({ ok: false });
+    if (action === 'listClosures') return output({ ok: true, data: listClosures(props, data.from) });
 
     const lock = LockService.getScriptLock();
     lock.waitLock(4000);
@@ -66,7 +67,7 @@ function doPost(event) {
       const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(BOOKING_TAB);
       if (!sheet) return output({ ok: false, reason: 'sheet_tab_missing' });
       if (!hasBookingHeaders(sheet)) return output({ ok: false, reason: 'sheet_headers_changed' });
-      const result = runBookingAction(sheet, action, data);
+      const result = runBookingAction(sheet, action, data, props);
       SpreadsheetApp.flush();
       return output({ ok: true, data: result });
     } finally {
@@ -103,7 +104,26 @@ function adminBooking(row) {
     status: status === '已確認' ? 'confirmed' : 'pending', line_display_name, line_linked_at };
 }
 
-function runBookingAction(sheet, action, data) {
+const CLOSURE_PREFIX = 'BOOKING_CLOSED:';
+
+function listClosures(props, from) {
+  return props.getKeys().filter(key => key.startsWith(CLOSURE_PREFIX))
+    .map(key => key.slice(CLOSURE_PREFIX.length).split(':'))
+    .filter(([date]) => date >= from).sort()
+    .map(([date, experience]) => ({ date, experience }));
+}
+
+function runBookingAction(sheet, action, data, props) {
+  if (action === 'setClosure') {
+    const keys = props.getKeys().filter(key => key.startsWith(CLOSURE_PREFIX));
+    for (const key of keys) {
+      if (key.slice(CLOSURE_PREFIX.length, CLOSURE_PREFIX.length + 10) < data.from) props.deleteProperty(key);
+    }
+    const key = CLOSURE_PREFIX + data.date + ':' + data.experience;
+    if (data.closed) props.setProperty(key, '1');
+    else props.deleteProperty(key);
+    return listClosures(props, data.from);
+  }
   const lastRow = sheet.getLastRow();
   if (action === 'list' && /^BK-[0-9A-F]{12}$/.test(data.code)) {
     if (lastRow < 2) return [];
@@ -115,6 +135,7 @@ function runBookingAction(sheet, action, data) {
   const rowNumber = data.code ? findBookingRow(sheet, data.code) : null;
   if (action === 'create') {
     if (rowNumber) return true;
+    if (props.getProperty(CLOSURE_PREFIX + data.date + ':' + data.experience)) return false;
     if (lastRow === sheet.getMaxRows()) sheet.insertRowsAfter(lastRow, 1);
     const range = sheet.getRange(lastRow + 1, 1, 1, BOOKING_HEADERS.length);
     range.setNumberFormats([['@', '@', '@', '@', '@', '@', '@', '@', BOOKING_TIME_FORMAT, '@', '@', BOOKING_TIME_FORMAT]]);

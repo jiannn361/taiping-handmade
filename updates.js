@@ -20,3 +20,29 @@ const news=window.BOOKING_CONFIG.latestNews;
 $('latest-news').hidden=!news;
 if(news){$('news-title').textContent=news.title||'最新資訊';$('news-text').textContent=news.text||'';if(news.image){$('news-image').src=news.image;$('news-image').hidden=false;$('news-image').onerror=()=>{$('news-image').hidden=true;};}}
 syncBookingTimes();
+
+let experienceClosuresRequest;
+function loadExperienceClosures(){
+ if(location.protocol==='file:')return;
+ if(experienceClosuresRequest)return experienceClosuresRequest;
+ experienceClosuresRequest=fetch('/api/bookings?availability=1',{cache:'no-store'})
+  .then(async response=>{
+   if(!response.ok)return;
+   const {closures}=await response.json();
+   if(!Array.isArray(closures))return;
+   window.BOOKING_CONFIG.experienceClosures=closures;
+   const date=$('date');
+   const reason=date.value&&bookingDateReason(date.value,window.BOOKING_CONFIG,today(),selection().value);
+   if(reason){
+    date.value='';
+    $('date-error').textContent=reason;
+    syncBookingTimes();
+   }
+   renderCalendar();
+  })
+  .catch(()=>{ /* The server checks availability when saving. */ })
+  .finally(()=>{experienceClosuresRequest=undefined;});
+ return experienceClosuresRequest;
+}
+loadExperienceClosures();
+window.addEventListener('focus',loadExperienceClosures);

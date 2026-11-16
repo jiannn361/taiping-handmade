@@ -79,3 +79,5 @@
   border-color: var(--green);
   box-shadow: 0 0 0 4px #dce7d6;
 }
+
+.map-link{display:inline-block;padding:6px 0;color:var(--green);text-decoration:underline;text-underline-offset:3px}

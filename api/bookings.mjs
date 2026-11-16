@@ -53,14 +53,16 @@ async function save(request) {
   }
 
   const code = 'BK-' + requestId.replaceAll('-', '').toUpperCase();
-  await bookings('create', { code, experience, date, time, people, name: name.trim(), phone });
+  const created = await bookings('create', { code, experience, date, time, people, name: name.trim(), phone });
+  if (created === false) return json({ error: '此體驗當日暫停預約，請選擇其他日期。' }, 409);
   return json({ code }, 201);
 }
 
 export default {
   async fetch(request) {
     const params = new URL(request.url).searchParams;
-    const adminRequest = request.method === 'GET' || request.method === 'PATCH';
+    const publicClosures = request.method === 'GET' && params.has('availability');
+    const adminRequest = !publicClosures && (request.method === 'GET' || request.method === 'PATCH');
     if (adminRequest) {
       if (settingIssue('BOOKING_ADMIN_KEY', hexKey)) return json({ error: '管理金鑰尚未設定，或格式不正確。' }, 503);
       const adminKey = process.env.BOOKING_ADMIN_KEY.trim();
@@ -69,7 +71,7 @@ export default {
     }
     const issues = [
       ...sheetsSetupIssues(),
-      ...(adminRequest ? [] : [settingIssue('LINE_CHANNEL_SECRET'), settingIssue('LINE_CHANNEL_ACCESS_TOKEN')])
+      ...(adminRequest || publicClosures ? [] : [settingIssue('LINE_CHANNEL_SECRET'), settingIssue('LINE_CHANNEL_ACCESS_TOKEN')])
     ].filter(Boolean);
     if (issues.length) {
       console.warn(`Booking setup: ${issues.join(', ')}`);
@@ -78,7 +80,28 @@ export default {
 
     try {
       if (request.method === 'POST') return params.has('link') ? await linkLineBooking(request) : await save(request);
+      if (publicClosures || (adminRequest && request.method === 'GET' && params.has('closures'))) {
+        const closures = await bookings('listClosures', { from: availability.today() });
+        if (!Array.isArray(closures)) throw new Error('Closure list unavailable');
+        return json({ closures });
+      }
       if (!adminRequest) return json({}, 405);
+      if (request.method === 'PATCH' && params.has('closures')) {
+        const body = await request.text();
+        if (body.length > 512) return json({}, 413);
+        let input;
+        try { input = JSON.parse(body); } catch { return json({ error: '日期設定格式不正確。' }, 400); }
+        const { date, experience, closed } = input ?? {};
+        const from = availability.today();
+        if (!experiences.includes(experience) || typeof closed !== 'boolean' || typeof date !== 'string' ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(date) || date < from ||
+            new Date(date + 'T00:00:00Z').toJSON()?.slice(0, 10) !== date) {
+          return json({ error: '請選擇今天或之後的有效日期與體驗。' }, 400);
+        }
+        const closures = await bookings('setClosure', { date, experience, closed, from });
+        if (!Array.isArray(closures)) throw new Error('Closure list unavailable');
+        return json({ closures });
+      }
 
       const code = params.get('code')?.trim().toUpperCase();
       if (request.method === 'PATCH') {

@@ -2,7 +2,14 @@ const $=id=>document.getElementById(id);
 $('date').min=today();
 const money=n=>'NT$ '+n.toLocaleString('en-US');
 function selection(){return document.querySelector('[name=experience]:checked');}
-function update(){const item=selection(),n=Number($('people').value);$('sum-exp').textContent=item.value;$('sum-location').textContent=item.dataset.location;$('sum-people').textContent=Number.isInteger(n)&&n>0?n+' 人':'請填寫人數';$('sum-date').textContent=[$('date').value,$('time').value].filter(Boolean).join(' · ')||'尚未選擇';$('total').textContent=money(Number(item.dataset.price)*(Number.isInteger(n)&&n>0?n:0));}
+function updateMapLink(item){
+ const destination=item.dataset.mapDestination;
+ const map=$("sum-map");
+ map.href="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(destination||"嘉義縣梅山鄉"+item.dataset.location);
+ map.textContent=destination?"開啟地圖：太平雲梯遊客中心 ↗":"開啟地圖：無二窯 ↗";
+}
+
+function update(){const item=selection(),n=Number($('people').value);$('sum-exp').textContent=item.value;$('sum-location').textContent=item.dataset.location;updateMapLink(item);$('sum-people').textContent=Number.isInteger(n)&&n>0?n+' 人':'請填寫人數';$('sum-date').textContent=[$('date').value,$('time').value].filter(Boolean).join(' · ')||'尚未選擇';$('total').textContent=money(Number(item.dataset.price)*(Number.isInteger(n)&&n>0?n:0));}
 $('form').addEventListener('input',update);update();
 
 

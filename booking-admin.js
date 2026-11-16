@@ -12,6 +12,9 @@ function logout() {
   adminPanel.hidden = true;
   adminLogin.hidden = false;
   results.replaceChildren();
+  closureForm.reset();
+  closureList.replaceChildren();
+  closureStatus.textContent = '';
   keyInput.value = '';
   codeInput.value = '';
   adminStatus.textContent = '';
@@ -111,7 +114,7 @@ adminLogin.addEventListener('submit', async event => {
     keyInput.value = '';
     adminLogin.hidden = true;
     adminPanel.hidden = false;
-    await loadBookings(session);
+    await Promise.all([loadBookings(session), loadClosures(session)]);
   } catch {
     if (adminSession === session) adminStatus.textContent = '連不到預約系統，請稍後重試。';
   }
@@ -122,3 +125,51 @@ search.addEventListener('submit', event => {
 });
 document.getElementById('admin-logout').addEventListener('click', logout);
 window.addEventListener('pagehide', logout);
+
+const closureForm = document.getElementById('admin-closure-form');
+const closureList = document.getElementById('admin-closures');
+const closureStatus = document.getElementById('admin-closure-status');
+
+async function loadClosures(session, change) {
+  if (!session || adminSession !== session || session.closuresLoading) return;
+  session.closuresLoading = true;
+  const submit = closureForm.querySelector('button');
+  submit.disabled = true;
+  closureStatus.textContent = change ? '儲存中…' : '讀取暫停日期中…';
+  const headers = { Authorization: 'Bearer ' + session.key, 'Content-Type': 'application/json' };
+  const endpoint = '/api/bookings?closures=1';
+  try {
+    const response = await fetch(endpoint, change
+      ? { method: 'PATCH', headers, body: JSON.stringify(change) }
+      : { headers, cache: 'no-store' });
+    const result = await response.json();
+    if (adminSession !== session) return;
+    if (!response.ok) throw new Error(result.error || '暫時無法讀寫暫停日期。');
+    closureList.replaceChildren(...result.closures.map(({ date, experience }) => {
+      const item = document.createElement('li');
+      item.textContent = date + '｜' + experience;
+      const reopen = document.createElement('button');
+      reopen.type = 'button';
+      reopen.className = 'secondary';
+      reopen.textContent = '取消這筆暫停設定';
+      reopen.setAttribute('aria-label', '取消 ' + date + ' ' + experience + ' 的暫停設定');
+      reopen.addEventListener('click', () => loadClosures(session, { date, experience, closed: false }));
+      item.append(reopen);
+      return item;
+    }));
+    closureStatus.textContent = change ? '已儲存日期設定。'
+      : result.closures.length ? '下方是已設定的臨時暫停日期。' : '目前尚未新增臨時暫停日期。';
+  } catch (error) {
+    if (adminSession === session) closureStatus.textContent = error.message || '暫時無法讀寫暫停日期。';
+  } finally {
+    session.closuresLoading = false;
+    if (adminSession === session) submit.disabled = false;
+  }
+}
+
+closureForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const date = document.getElementById('admin-closure-date').value;
+  const experience = document.getElementById('admin-closure-experience').value;
+  loadClosures(adminSession, { date, experience, closed: true });
+});

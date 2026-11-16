@@ -96,6 +96,8 @@ $('form').addEventListener('submit', event => {
   $('save-booking').hidden = false;
   $('official-chat').hidden = true;
   $('copy').hidden = true;
+  $('review-title').textContent = '確認你的預約申請';
+  $('review-instructions').hidden = false;
   $('status').textContent = '確認資料後，請先儲存預約申請。';
   if (bookingAttempt.code) showBookingCode(bookingAttempt.code);
   $('review').showModal();
@@ -114,10 +116,12 @@ function showBookingCode(code) {
   $('official-chat').hidden = false;
   $('copy').hidden = Boolean(sentToLine);
   $('save-booking').hidden = true;
+  $('review-title').textContent = '預約申請已收到';
+  $('review-instructions').hidden = true;
   $('message').textContent = `預約編號：${shortBookingCode(code)}`;
   $('status').textContent = sentToLine
-    ? '申請已存檔，預約小卡已傳回原聊天室。請回官方 LINE 查看。'
-    : '申請已存檔。請開啟官方 LINE 並送出配對訊息，讓工作室確認預約。';
+    ? '已收到預約申請，請留意官方 LINE 回覆。收到工作室確認後，預約才正式成立。'
+    : '已收到預約申請。請點下方按鈕，在官方 LINE 送出預約編號，再等候工作室確認。';
 }
 
 $('save-booking').addEventListener('click', async () => {
@@ -139,6 +143,7 @@ $('save-booking').addEventListener('click', async () => {
     });
     const result = await response.json();
     if (!response.ok || !result.code) {
+      if (response.status === 409) loadExperienceClosures();
       $('status').textContent = result.error || '預約暫時無法儲存，請稍後重試。';
       return;
     }

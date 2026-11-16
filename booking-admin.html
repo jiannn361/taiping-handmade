@@ -27,6 +27,23 @@
           <button class="primary" type="submit">查詢或更新名單</button>
         </form>
         <button id="admin-logout" class="secondary" type="button">登出</button>
+        <section aria-labelledby="closure-title" class="kiln-result">
+          <h2 id="closure-title">臨時暫停預約</h2>
+          <p>指定體驗將全天暫停接受新申請。若已有預約，請另外聯絡客人。</p>
+          <form id="admin-closure-form" class="fields">
+            <label>體驗項目
+              <select id="admin-closure-experience" required>
+                <option>手拉胚</option>
+                <option>陶杯刻畫</option>
+                <option>植物槌染</option>
+              </select>
+            </label>
+            <label>暫停日期 <input id="admin-closure-date" type="date" required></label>
+            <button class="primary full" type="submit">暫停當天預約</button>
+          </form>
+          <p id="admin-closure-status" role="status"></p>
+          <ul id="admin-closures"></ul>
+        </section>
         <div id="admin-results"></div>
       </div>
       <p id="admin-status" role="status"></p>
