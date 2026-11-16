@@ -82,7 +82,7 @@ export default {
       if (request.method === 'POST') return params.has('link') ? await linkLineBooking(request) : await save(request);
       if (publicClosures || (adminRequest && request.method === 'GET' && params.has('closures'))) {
         const closures = await bookings('listClosures', { from: availability.today() });
-        if (!Array.isArray(closures)) throw new Error('Closure list unavailable');
+        if (!Array.isArray(closures)) return json({ error: '暫停預約功能尚未就緒。請在 Google Apps Script 更新 Bookings.gs，並將現有的網頁應用程式部署為新版本。' }, 503);
         return json({ closures });
       }
       if (!adminRequest) return json({}, 405);
@@ -99,7 +99,7 @@ export default {
           return json({ error: '請選擇今天或之後的有效日期與體驗。' }, 400);
         }
         const closures = await bookings('setClosure', { date, experience, closed, from });
-        if (!Array.isArray(closures)) throw new Error('Closure list unavailable');
+        if (!Array.isArray(closures)) return json({ error: '無法確認暫停設定。請確認現有的 Apps Script 網頁應用程式已部署最新版 Bookings.gs，再重新整理後台查看。' }, 503);
         return json({ closures });
       }
 
@@ -113,6 +113,9 @@ export default {
       const rows = await bookings('list', { code });
       return json({ rows });
     } catch {
+      if (adminRequest && params.has('closures')) {
+        return json({ error: '暫停預約服務暫時無法連線。請確認 Apps Script 已部署最新版 Bookings.gs，並查看 Vercel Logs 中的 Booking Sheets 訊息。' }, 503);
+      }
       return json({ error: adminRequest ? '管理金鑰已驗證，但暫時無法讀寫 Google 試算表。' : '暫時無法處理預約，請稍後重試。' }, 503);
     }
   }

@@ -27,7 +27,7 @@ kilnLookup.addEventListener('submit', event => {
   const current = kilnStages.findIndex(([stage]) => stage === batch?.stage);
 
   if (current === -1) {
-    kilnMessage.textContent = '查不到這個批次。請確認查詢碼，或向陶藝現場詢問。';
+    kilnMessage.textContent = '查不到這個批次。請確認查詢碼，或向工作室詢問。';
     kilnResult.hidden = true;
     return;
   }
