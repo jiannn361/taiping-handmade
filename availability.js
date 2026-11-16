@@ -7,6 +7,7 @@ function bookingDateReason(value,config,now,experience){
   if(value<=now)return '當天及過去日期無法預約，請選擇明天或之後的日期。';
   if((config.closedWeekdays||[3]).includes(date.getUTCDay()))return '此日為固定公休日，請選擇其他日期。';
   if((config.closedDates||[]).includes(value))return '此日暫停預約，請選擇其他日期。';
+  if(experience==='植物槌染'&&(config.plantDyeClosedDates||[]).includes(value))return '當日植物槌染暫停預約，請選擇其他日期。';
   if(['手拉胚','陶杯刻畫'].includes(experience)){
     const holidays=globalThis.TAIWAN_HOLIDAYS;
     if(!holidays?.years.includes(Number(value.slice(0,4))))return '此年度的陶藝預約尚未開放，請聯繫工作室。';

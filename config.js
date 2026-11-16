@@ -8,6 +8,7 @@ globalThis.BOOKING_CONFIG = {
   closedWeekdays: [3],
   // 臨時整天休息：例如 ['2026-12-05', '2026-12-06']。刪除日期即可恢復預約。
   closedDates: ['2027-02-04','2027-02-05','2027-02-06','2027-02-07','2027-02-08','2027-02-09'],
+  plantDyeClosedDates: ['2026-12-25', '2026-12-26'],
   // 陶藝國定假日連假整段暫停線上預約，單日假日照常開放；下方可設定連假例外開放日期，不覆蓋週三或 closedDates。
   potteryHolidayOpenDates: [],
   latestNews: {
