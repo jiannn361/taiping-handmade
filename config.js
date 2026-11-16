@@ -12,7 +12,7 @@ globalThis.BOOKING_CONFIG = {
   potteryHolidayOpenDates: [],
   latestNews: {
     title: '陶藝燒製與作品等候公告',
-    text: '近期即將燒製一批陶藝作品。接下來預約的陶藝體驗，將需要較長的等候時間(約1年)，完成時間以工作室通知為準，敬請耐心等候。',
+    text: '近期剛燒製完一批陶藝作品。接下來預約的陶藝體驗，將需要較長的等候時間(約1年)，完成時間以工作室通知為準，敬請耐心等候。',
     image: '' // 日後可填 'images/news.jpg'，沒有圖片時只顯示文字。
   },
   experiencePhotos: { '手拉胚': 'images/pottery.jpg', '陶杯刻畫': 'images/cup.jpg', '植物槌染': 'images/plant.jpg' },

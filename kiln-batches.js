@@ -3,7 +3,7 @@
 // 格式範例（上線前請以真實批次資料取代）：
 // 'KILN-AB7Q': { stage: 'waiting', updated: '2026-11-09' },
 const kilnBatches = {
-  'KILN-AA26': { stage: 'firing', updated: '2026-11-09' },
+  'KILN-AA26': { stage: 'awaiting-shipment', updated: '2026-11-16' },
   'KILN-': { stage: 'awaiting-shipment', updated: '2026-11-09' },
   'KILN-': { stage: 'shipping', updated: '2026-11-09' },
 };
