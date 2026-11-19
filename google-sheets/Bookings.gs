@@ -98,10 +98,24 @@ function literalText(value) {
   return firstCharacter && "=+-@'".includes(firstCharacter) ? "'" + value : value;
 }
 
+const BOOKING_DETAILS_HEADER = '確認時段與通知紀錄';
+
+function bookingDetails(row) {
+  return row[12] ? JSON.parse(row[12]) : {};
+}
+
+function publicBooking(row) {
+  const [code, experience, date, time, people, , , status] = row;
+  const details = bookingDetails(row);
+  return { code, experience, date: status === '已確認' ? details.date || date : date,
+    time: status === '已確認' ? details.time || time : time, people: Number(people),
+    status: status === '已確認' ? 'confirmed' : status === '需另約時段' ? 'reschedule' : 'pending' };
+}
+
 function adminBooking(row) {
-  const [code, experience, date, time, people, name, phone, status, , , line_display_name, line_linked_at] = row;
-  return { code, experience, date, time, people: Number(people), name, phone,
-    status: status === '已確認' ? 'confirmed' : 'pending', line_display_name, line_linked_at };
+  const [, , , , , name, phone, , , , line_display_name, line_linked_at] = row;
+  return { ...publicBooking(row), name, phone, line_display_name, line_linked_at,
+    lineNotified: Boolean(bookingDetails(row).notified) };
 }
 
 const CLOSURE_PREFIX = 'BOOKING_CLOSED:';
@@ -125,12 +139,16 @@ function runBookingAction(sheet, action, data, props) {
     return listClosures(props, data.from);
   }
   const lastRow = sheet.getLastRow();
-  if (action === 'list' && /^BK-[0-9A-F]{12}$/.test(data.code)) {
+  const columns = BOOKING_HEADERS.length + Number(sheet.getRange(1, 13).getDisplayValue() === BOOKING_DETAILS_HEADER);
+  const readRow = number => sheet.getRange(number, 1, 1, columns).getDisplayValues()[0];
+  if ((action === 'list' || action === 'lookup') && /^BK-[0-9A-F]{12}$/.test(data.code)) {
     if (lastRow < 2) return [];
     const suffix = data.code.slice(3);
     return sheet.getRange(2, 1, lastRow - 1, 1)
       .createTextFinder(`BK-[0-9A-F]{20}${suffix}`).useRegularExpression(true).matchEntireCell(true).findAll()
-      .map(match => adminBooking(sheet.getRange(match.getRow(), 1, 1, BOOKING_HEADERS.length).getDisplayValues()[0]));
+      .map(match => readRow(match.getRow()))
+      .filter(row => action === 'list' || row[6] === data.phone)
+      .map(action === 'list' ? adminBooking : publicBooking);
   }
   const rowNumber = data.code ? findBookingRow(sheet, data.code) : null;
   if (action === 'create') {
@@ -146,14 +164,46 @@ function runBookingAction(sheet, action, data, props) {
 
   if (action === 'list') {
     const count = Math.min(lastRow - 1, 50);
-    if (data.code) return rowNumber ? [adminBooking(sheet.getRange(rowNumber, 1, 1, BOOKING_HEADERS.length).getDisplayValues()[0])] : [];
-    return count ? sheet.getRange(lastRow - count + 1, 1, count, BOOKING_HEADERS.length).getDisplayValues().reverse().map(adminBooking) : [];
+    if (data.code) return rowNumber ? [adminBooking(readRow(rowNumber))] : [];
+    return count ? sheet.getRange(lastRow - count + 1, 1, count, columns).getDisplayValues().reverse().map(adminBooking) : [];
   }
 
   if (!rowNumber) return null;
-  if (action === 'confirm') {
-    sheet.getRange(rowNumber, 8).setValue('已確認');
-    return true;
+  if (action === 'confirmAndNotify' || action === 'reschedule' || action === 'notificationSent') {
+    const row = readRow(rowNumber);
+    const booking = publicBooking(row);
+    const details = bookingDetails(row);
+    if (action === 'reschedule') {
+      if (booking.status === 'confirmed') return { conflict: true };
+      sheet.getRange(rowNumber, 8).setValue('需另約時段');
+      return { ok: true };
+    }
+    if (booking.status === 'confirmed' && data.date &&
+        (data.date !== booking.date || data.time !== booking.time)) return { conflict: true };
+    if (columns === 12) {
+      const header = sheet.getRange(1, 13);
+      if (!sheet.getRange(1, 13, lastRow, 1).isBlank()) throw new Error('Confirmation column already in use');
+      header.setValue(BOOKING_DETAILS_HEADER);
+    }
+    const record = sheet.getRange(rowNumber, 13);
+    if (action === 'notificationSent') {
+      if (details.retryKey !== data.retryKey) return null;
+      record.setValue(JSON.stringify({ ...details, notified: true }));
+      return true;
+    }
+    if (booking.status !== 'confirmed') {
+      details.date = data.date || booking.date;
+      details.time = data.time || booking.time;
+      record.setValue(JSON.stringify(details));
+      sheet.getRange(rowNumber, 8).setValue('已確認');
+    }
+    if (row[9] && !details.retryKey) {
+      details.retryKey = data.retryKey;
+      details.attemptedAt = Date.now();
+      record.setValue(JSON.stringify(details));
+    }
+    return { ...booking, date: details.date || booking.date, time: details.time || booking.time,
+      userId: row[9], ...details };
   }
   if (action !== 'link') return null;
 

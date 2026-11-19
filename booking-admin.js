@@ -32,7 +32,8 @@ function adminBookingCard(row, session) {
     `${row.experience}｜${row.date} ${row.time}｜${row.people} 人`,
     `預約人：${row.name}｜${row.phone}`,
     row.line_linked_at ? `已收到 LINE 訊息${row.line_display_name ? `｜LINE 名稱：${row.line_display_name}` : ''}` : '尚未收到 LINE 訊息',
-    row.status === 'confirmed' ? '已確認預約' : '待確認預約'
+    { confirmed: '已確認預約', reschedule: '需另約時段', pending: '待確認預約' }[row.status],
+    ...(row.status === 'confirmed' ? [row.lineNotified ? 'LINE 已受理確認通知' : '尚無 LINE 確認通知紀錄'] : [])
   ];
   for (const detail of details) {
     const paragraph = document.createElement('p');
@@ -41,29 +42,70 @@ function adminBookingCard(row, session) {
   }
 
   if (row.status !== 'confirmed') {
+    const form = document.createElement('form');
+    form.className = 'booking-confirm-form';
+    for (const [type, labelText, value] of [
+      ['date', '確認日期', row.date], ['time', '確認時間', row.time]
+    ]) {
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = type;
+      input.name = type;
+      input.value = value;
+      input.required = true;
+      label.append(labelText + ' ', input);
+      form.append(label);
+    }
     const confirm = document.createElement('button');
-    confirm.type = 'button';
     confirm.className = 'secondary';
-    confirm.textContent = '標記為已確認';
-    confirm.addEventListener('click', async () => {
+    confirm.textContent = '確認預約並發送 LINE 通知';
+    form.append(confirm);
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
       confirm.disabled = true;
-      await loadBookings(session, row.code);
+      await loadBookings(session, { code: row.code, ...Object.fromEntries(new FormData(form)) });
       confirm.disabled = false;
     });
-    card.append(confirm);
+    card.append(form);
+    if (row.status !== 'reschedule') {
+      const reschedule = document.createElement('button');
+      reschedule.type = 'button';
+      reschedule.className = 'secondary';
+      reschedule.textContent = '標記為需另約時段';
+      reschedule.addEventListener('click', () => loadBookings(session, { code: row.code, action: 'reschedule' }));
+      card.append(reschedule);
+    }
+  } else if (!row.lineNotified && row.line_linked_at) {
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'secondary';
+    retry.textContent = '發送 LINE 確認通知';
+    retry.addEventListener('click', () => loadBookings(session, { code: row.code }));
+    card.append(retry);
   }
   return card;
 }
 
-async function loadBookings(session, confirmCode) {
-  if (adminSession !== session || session.loading) return;
+async function loadBookings(session, change) {
+  if (!session || adminSession !== session || session.loading) return;
   session.loading = true;
   adminStatus.textContent = '讀取中…';
   const headers = { Authorization: `Bearer ${session.key}` };
   try {
-    if (confirmCode) {
-      const update = await fetch(`/api/bookings?code=${encodeURIComponent(confirmCode)}`, { method: 'PATCH', headers });
-      if (!update.ok) throw new Error('無法更新預約。');
+    let updateMessage;
+    if (change) {
+      const { code, ...details } = change;
+      const update = await fetch(`/api/bookings?code=${encodeURIComponent(code)}`, {
+        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(details)
+      });
+      const result = await update.json();
+      if (!update.ok) throw new Error(result.error || '無法更新預約。');
+      updateMessage = {
+        sent: '預約已確認，LINE 已受理確認通知。',
+        unlinked: '預約已確認。客人尚未連結 LINE，請用其他方式通知。',
+        failed: '預約已確認。LINE 發送結果未確認，可在名單重試。',
+        manual: '預約已確認。請先到 LINE 聊天室核對通知紀錄，再視需要手動聯絡。'
+      }[result.notification] || '已標記為需另約時段，請聯絡客人協調。';
     }
     const code = codeInput.value.trim();
     const response = await fetch(`/api/bookings?code=${encodeURIComponent(code)}`, { headers, cache: 'no-store' });
@@ -79,7 +121,7 @@ async function loadBookings(session, confirmCode) {
     adminLogin.hidden = true;
     adminPanel.hidden = false;
     results.replaceChildren(...result.rows.map(row => adminBookingCard(row, session)));
-    adminStatus.textContent = result.rows.length ? `顯示 ${result.rows.length} 筆預約。` : '查無預約。';
+    adminStatus.textContent = updateMessage || (result.rows.length ? `顯示 ${result.rows.length} 筆預約。` : '查無預約。');
   } catch (error) {
     if (adminSession === session) {
       adminStatus.textContent = error.message || '已登入，但名單暫時無法讀取。';

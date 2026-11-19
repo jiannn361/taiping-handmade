@@ -1,12 +1,80 @@
+import { randomUUID } from 'node:crypto';
 import '../config.js';
 import '../holidays.js';
 import availability from '../availability.js';
+import card from '../booking-card.js';
 import { bookingCode, bookings, hexKey, json, matchesSecret, settingIssue, sheetsSetupIssues } from '../_server/booking-store.mjs';
 
 const experiences = ['手拉胚', '陶杯刻畫', '植物槌染'];
 const requestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fullCodePattern = new RegExp(`^${bookingCode}$`);
 const shortCodePattern = /^BK-[0-9A-F]{12}$/;
+
+function bookingLocation(experience) {
+  return experience === '植物槌染' ? '雲梯廣場第一涼亭處' : '無二窯藝術空間';
+}
+
+async function lookup(request) {
+  const body = await request.text();
+  if (body.length > 512) return json({}, 413);
+  const input = JSON.parse(body);
+  const code = typeof input?.code === 'string' ? input.code.trim().toUpperCase() : '';
+  const phone = input?.phone;
+  if ((!shortCodePattern.test(code) && !fullCodePattern.test(code)) ||
+      typeof phone !== 'string' || !/^09[0-9]{8}$/.test(phone)) {
+    return json({ error: '請輸入正確的預約編號與手機號碼。' }, 400);
+  }
+  const rows = await bookings('lookup', { code: card.shortBookingCode(code), phone });
+  if (!Array.isArray(rows)) return json({ error: '查詢服務暫時無法使用。' }, 503);
+  if (rows.length !== 1 || (fullCodePattern.test(code) && rows[0].code !== code)) {
+    return json({ error: '查無符合的預約，請確認預約編號與手機號碼。' }, 404);
+  }
+  const { experience, date, time, people, status } = rows[0];
+  return json({ booking: { code: card.shortBookingCode(code), experience, date, time, people, status,
+    ...(status === 'confirmed' ? { location: bookingLocation(experience) } : {}) } });
+}
+
+async function updateBooking(request, code) {
+  const body = await request.text();
+  if (body.length > 512) return json({}, 413);
+  const { action = 'confirm', date, time } = (body ? JSON.parse(body) : {}) ?? {};
+  if (!['confirm', 'reschedule'].includes(action) || ((date !== undefined || time !== undefined) &&
+      (action !== 'confirm' || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      new Date(date + 'T00:00:00Z').toJSON()?.slice(0, 10) !== date ||
+      typeof time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)))) {
+    return json({ error: '請確認預約狀態及日期時間格式。' }, 400);
+  }
+  const booking = await bookings(action === 'confirm' ? 'confirmAndNotify' : action, { code, date, time, retryKey: randomUUID() });
+  if (!booking) return json({ error: '查無預約，或 Apps Script 尚未更新。' }, 404);
+  if (booking.conflict) return json({ error: '這筆預約已確認，請重新整理名單。' }, 409);
+  if (action === 'reschedule') return json({ ok: true });
+  if (!booking.code) return json({ error: '請先將 Apps Script 更新至最新版。' }, 503);
+  if (booking.notified) return json({ notification: 'sent' });
+  if (!booking.userId) return json({ notification: 'unlinked' });
+  if (Date.now() - booking.attemptedAt >= 23 * 3600000) return json({ notification: 'manual' });
+
+  try {
+    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
+    if (!token) throw new Error('Missing LINE token');
+    const lookupUrl = new URL('/booking-status.html', request.url);
+    lookupUrl.searchParams.set('code', card.shortBookingCode(code));
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Line-Retry-Key': booking.retryKey },
+      body: JSON.stringify({ to: booking.userId, messages: [card.bookingCard({
+        ...booking, location: bookingLocation(booking.experience), lookupUrl: lookupUrl.href
+      }, true)] }),
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok && !(response.status === 409 && response.headers.has('x-line-accepted-request-id'))) {
+      throw new Error('LINE push rejected');
+    }
+    if (!await bookings('notificationSent', { code, retryKey: booking.retryKey })) throw new Error('Notification record not saved');
+    return json({ notification: 'sent' });
+  } catch {
+    return json({ notification: 'failed' });
+  }
+}
 
 async function linkLineBooking(request) {
   const body = await request.text();
@@ -62,6 +130,7 @@ export default {
   async fetch(request) {
     const params = new URL(request.url).searchParams;
     const publicClosures = request.method === 'GET' && params.has('availability');
+    const publicLookup = request.method === 'POST' && params.has('lookup');
     const adminRequest = !publicClosures && (request.method === 'GET' || request.method === 'PATCH');
     if (adminRequest) {
       if (settingIssue('BOOKING_ADMIN_KEY', hexKey)) return json({ error: '管理金鑰尚未設定，或格式不正確。' }, 503);
@@ -71,7 +140,7 @@ export default {
     }
     const issues = [
       ...sheetsSetupIssues(),
-      ...(adminRequest || publicClosures ? [] : [settingIssue('LINE_CHANNEL_SECRET'), settingIssue('LINE_CHANNEL_ACCESS_TOKEN')])
+      ...(adminRequest || publicClosures || publicLookup ? [] : [settingIssue('LINE_CHANNEL_SECRET'), settingIssue('LINE_CHANNEL_ACCESS_TOKEN')])
     ].filter(Boolean);
     if (issues.length) {
       console.warn(`Booking setup: ${issues.join(', ')}`);
@@ -79,6 +148,7 @@ export default {
     }
 
     try {
+      if (publicLookup) return await lookup(request);
       if (request.method === 'POST') return params.has('link') ? await linkLineBooking(request) : await save(request);
       if (publicClosures || (adminRequest && request.method === 'GET' && params.has('closures'))) {
         const closures = await bookings('listClosures', { from: availability.today() });
@@ -106,13 +176,13 @@ export default {
       const code = params.get('code')?.trim().toUpperCase();
       if (request.method === 'PATCH') {
         if (!code || !fullCodePattern.test(code)) return json({ error: '預約編號格式不正確。' }, 400);
-        const updated = await bookings('confirm', { code });
-        return updated ? json({ ok: true }) : json({ error: '查無預約。' }, 404);
+        return await updateBooking(request, code);
       }
       if (code && !fullCodePattern.test(code) && !shortCodePattern.test(code)) return json({ error: '預約編號格式不正確。' }, 400);
       const rows = await bookings('list', { code });
       return json({ rows });
-    } catch {
+    } catch (error) {
+      if (error instanceof SyntaxError) return json({ error: '資料格式不正確。' }, 400);
       if (adminRequest && params.has('closures')) {
         return json({ error: '暫停預約服務暫時無法連線。請確認 Apps Script 已部署最新版 Bookings.gs，並查看 Vercel Logs 中的 Booking Sheets 訊息。' }, 503);
       }

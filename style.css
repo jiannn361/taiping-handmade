@@ -32,6 +32,9 @@
 .kiln-panel h1{font:600 clamp(24px,5vw,34px) 'Noto Serif TC',serif;margin:8px 0}
 .kiln-panel form{margin-top:24px}
 .kiln-panel label{font-weight:700}
+.booking-lookup-form,.booking-confirm-form{display:grid;gap:8px}
+.booking-lookup-form input,.booking-confirm-form input{min-width:0;border:1px solid var(--line);border-radius:3px;padding:10px;font:inherit;font-size:16px;background:white;color:var(--ink)}
+.booking-lookup-form button,.booking-confirm-form button{justify-self:start;margin-top:6px}
 .kiln-controls{display:flex;gap:10px;margin-top:6px}
 .kiln-controls input{min-width:0;flex:1;border:1px solid var(--line);border-radius:3px;padding:12px;color:var(--ink);background:white;font:16px 'Noto Sans TC',sans-serif}
 .kiln-controls button{width:auto;flex:none;padding-inline:18px}
