@@ -57,7 +57,9 @@ export default {
         if (!code || typeof userId !== 'string' || !/^U[0-9a-f]{32}$/.test(userId) || !Number.isSafeInteger(event.timestamp)) continue;
 
         const booking = await bookings('link', { code, userId, displayName: await displayName(userId), timestamp: event.timestamp });
-        if (booking && event.replyToken && !match[2]) await replyBookingCard(event.replyToken, booking);
+        if (booking && event.replyToken && !match[2]) {
+          await replyBookingCard(event.replyToken, { ...booking, lookupUrl: card.bookingLookupUrl(request.url, code) });
+        }
       }
       return json({ ok: true });
     } catch {

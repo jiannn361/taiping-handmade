@@ -139,7 +139,11 @@ function runBookingAction(sheet, action, data, props) {
     return listClosures(props, data.from);
   }
   const lastRow = sheet.getLastRow();
-  const columns = BOOKING_HEADERS.length + Number(sheet.getRange(1, 13).getDisplayValue() === BOOKING_DETAILS_HEADER);
+  const detailsColumn = BOOKING_HEADERS.length + 1;
+  const maxColumns = sheet.getMaxColumns();
+  const hasDetails = maxColumns >= detailsColumn &&
+    sheet.getRange(1, detailsColumn).getDisplayValue() === BOOKING_DETAILS_HEADER;
+  const columns = hasDetails ? detailsColumn : BOOKING_HEADERS.length;
   const readRow = number => sheet.getRange(number, 1, 1, columns).getDisplayValues()[0];
   if ((action === 'list' || action === 'lookup') && /^BK-[0-9A-F]{12}$/.test(data.code)) {
     if (lastRow < 2) return [];
@@ -180,12 +184,14 @@ function runBookingAction(sheet, action, data, props) {
     }
     if (booking.status === 'confirmed' && data.date &&
         (data.date !== booking.date || data.time !== booking.time)) return { conflict: true };
-    if (columns === 12) {
-      const header = sheet.getRange(1, 13);
-      if (!sheet.getRange(1, 13, lastRow, 1).isBlank()) throw new Error('Confirmation column already in use');
+    if (!hasDetails) {
+      if (action === 'notificationSent') return null;
+      if (maxColumns < detailsColumn) sheet.insertColumnsAfter(maxColumns, detailsColumn - maxColumns);
+      const header = sheet.getRange(1, detailsColumn);
+      if (!sheet.getRange(1, detailsColumn, lastRow, 1).isBlank()) throw new Error('Confirmation column already in use');
       header.setValue(BOOKING_DETAILS_HEADER);
     }
-    const record = sheet.getRange(rowNumber, 13);
+    const record = sheet.getRange(rowNumber, detailsColumn);
     if (action === 'notificationSent') {
       if (details.retryKey !== data.retryKey) return null;
       record.setValue(JSON.stringify({ ...details, notified: true }));

@@ -29,7 +29,7 @@ async function connectBookingLine() {
 async function sendBookingToLine(code, booking) {
   const client = await lineClient;
   if (!client) return false;
-  const card = bookingCard({ ...booking, code });
+  const card = bookingCard({ ...booking, code, lookupUrl: bookingLookupUrl(location.href, code) });
   try {
     await client.sendMessages([card]);
   } catch {
@@ -82,15 +82,31 @@ $('form').addEventListener('submit', event => {
   };
   const payload = JSON.stringify(booking);
   if (bookingAttempt?.payload !== payload) bookingAttempt = { booking, payload };
-  $('message').textContent = [
-    `體驗：${booking.experience}`,
-    `地點：${item.dataset.location}`,
-    `日期與時間：${booking.date} ${booking.time}`,
-    `人數：${booking.people} 人`,
-    `姓名：${booking.name}`,
-    `手機：${booking.phone}`,
-    `預估費用：${money(Number(item.dataset.price) * booking.people)}`
-  ].join('\n');
+  const details = [
+    ['體驗時段', [
+      ['體驗', booking.experience],
+      ['申請時段', `${booking.date.replaceAll('-', '/')} ${booking.time}`],
+      ['地點', item.dataset.location],
+      ['人數', `${booking.people} 人`],
+      ['預估費用', money(Number(item.dataset.price) * booking.people)]
+    ]],
+    ['聯絡資料', [['姓名', booking.name], ['手機', booking.phone]]]
+  ];
+  $('message').replaceChildren(...details.map(([title, rows]) => {
+    const section = document.createElement('section');
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    const list = document.createElement('dl');
+    for (const [label, value] of rows) {
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const description = document.createElement('dd');
+      description.textContent = value;
+      list.append(term, description);
+    }
+    section.append(heading, list);
+    return section;
+  }));
   $('save-booking').disabled = false;
   $('save-booking').textContent = '儲存預約申請';
   $('save-booking').hidden = false;
@@ -98,7 +114,7 @@ $('form').addEventListener('submit', event => {
   $('copy').hidden = true;
   $('review-title').textContent = '確認你的預約申請';
   $('review-instructions').hidden = false;
-  $('status').textContent = '確認資料後，請先儲存預約申請。';
+  $('status').textContent = '';
   if (bookingAttempt.code) showBookingCode(bookingAttempt.code);
   $('review').showModal();
 });

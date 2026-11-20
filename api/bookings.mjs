@@ -24,13 +24,20 @@ async function lookup(request) {
       typeof phone !== 'string' || !/^09[0-9]{8}$/.test(phone)) {
     return json({ error: '請輸入正確的預約編號與手機號碼。' }, 400);
   }
-  const rows = await bookings('lookup', { code: card.shortBookingCode(code), phone });
+  const shortCode = card.shortBookingCode(code);
+  let rows = await bookings('lookup', { code: shortCode, phone });
+  // Older Apps Script deployments return null for the lookup action.
+  if (rows == null) {
+    const legacyRows = await bookings('list', { code });
+    if (Array.isArray(legacyRows)) rows = legacyRows.filter(row => row.phone === phone);
+  }
   if (!Array.isArray(rows)) return json({ error: '查詢服務暫時無法使用。' }, 503);
-  if (rows.length !== 1 || (fullCodePattern.test(code) && rows[0].code !== code)) {
+  const matches = fullCodePattern.test(code) ? rows.filter(row => row.code === code) : rows;
+  if (matches.length !== 1) {
     return json({ error: '查無符合的預約，請確認預約編號與手機號碼。' }, 404);
   }
-  const { experience, date, time, people, status } = rows[0];
-  return json({ booking: { code: card.shortBookingCode(code), experience, date, time, people, status,
+  const { experience, date, time, people, status } = matches[0];
+  return json({ booking: { code: shortCode, experience, date, time, people, status,
     ...(status === 'confirmed' ? { location: bookingLocation(experience) } : {}) } });
 }
 
@@ -56,13 +63,11 @@ async function updateBooking(request, code) {
   try {
     const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
     if (!token) throw new Error('Missing LINE token');
-    const lookupUrl = new URL('/booking-status.html', request.url);
-    lookupUrl.searchParams.set('code', card.shortBookingCode(code));
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Line-Retry-Key': booking.retryKey },
       body: JSON.stringify({ to: booking.userId, messages: [card.bookingCard({
-        ...booking, location: bookingLocation(booking.experience), lookupUrl: lookupUrl.href
+        ...booking, location: bookingLocation(booking.experience), lookupUrl: card.bookingLookupUrl(request.url, code)
       }, true)] }),
       signal: AbortSignal.timeout(5000)
     });
@@ -186,7 +191,12 @@ export default {
       if (adminRequest && params.has('closures')) {
         return json({ error: '暫停預約服務暫時無法連線。請確認 Apps Script 已部署最新版 Bookings.gs，並查看 Vercel Logs 中的 Booking Sheets 訊息。' }, 503);
       }
-      return json({ error: adminRequest ? '管理金鑰已驗證，但暫時無法讀寫 Google 試算表。' : '暫時無法處理預約，請稍後重試。' }, 503);
+      const sheetMessage = {
+        sheet_not_initialized: 'Apps Script 尚未連結預約試算表，請在預約試算表的指令碼專案執行 setupBookingSheet。',
+        sheet_tab_missing: '找不到「預約名單」分頁，請確認當初設定的預約試算表。',
+        sheet_headers_changed: '「預約名單」前 12 欄的欄名或順序與程式不符，請核對 Bookings.gs 的 BOOKING_HEADERS。'
+      }[error.code];
+      return json({ error: adminRequest ? sheetMessage || '管理金鑰已驗證，但暫時無法讀寫 Google 試算表。' : '暫時無法處理預約，請稍後重試。' }, 503);
     }
   }
 };

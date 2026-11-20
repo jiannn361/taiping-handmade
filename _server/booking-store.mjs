@@ -56,8 +56,11 @@ export async function bookings(action, data) {
     throw new Error('Unexpected Google Sheets response');
   });
   if (!result?.ok) {
-    console.warn(`Booking Sheets (${action}): ${scriptFailureReason(result?.reason)}`);
-    throw new Error('Google Sheets request rejected');
+    const reason = scriptFailureReason(result?.reason);
+    console.warn(`Booking Sheets (${action}): ${reason}`);
+    const error = new Error('Google Sheets request rejected');
+    error.code = reason;
+    throw error;
   }
   return result.data;
 }
