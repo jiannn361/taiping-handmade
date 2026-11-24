@@ -21,14 +21,9 @@ const notesByExperience={
 '植物槌染':['體驗時長：40–60分鐘。','體驗地點：雲梯廣場第一涼亭處。','施作時將花瓣或葉子以同一方向敲打，使植物汁液轉印到布料。','完成後撕去殘留葉片；為了讓顏色更持久，後續可浸泡鹽水／稀釋蘇打水，再鋪平晾乾。']
 };
 function showExperienceInfo(){
- const name=selection().value,index=['手拉胚','陶杯刻畫','植物槌染'].indexOf(name);
+ const name=selection().value;
  $('info-title').textContent=name+'｜預約須知';
  $('experience-notes').replaceChildren(...notesByExperience[name].map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
- const custom=window.BOOKING_CONFIG.processImages?.[name];
- $('process-frame').hidden=!custom;if(custom)$('process-image').src=custom;
- $('process-image').alt=name+'施作流程圖';
- $('process-frame').classList.toggle('custom-image',Boolean(custom));
- $('process-image').style.transform='none';
 }
 $('form').addEventListener('change',e=>{if(e.target.name==='experience')showExperienceInfo();});
 showExperienceInfo();

@@ -17,8 +17,8 @@ globalThis.BOOKING_CONFIG = {
     image: '' // 日後可填 'images/news.jpg'，沒有圖片時只顯示文字。
   },
   experiencePhotos: { '手拉胚': 'images/pottery.jpg', '陶杯刻畫': 'images/cup.jpg', '植物槌染': 'images/plant.jpg' },
-  // 支援 PNG、JPG、WebP 和動態 GIF，例如 'images/pottery-process.gif'。
-  processImages: { '手拉胚': 'images/yunbao-pottery.gif', '陶杯刻畫': 'images/cup.png', '植物槌染': 'images/plant.png' }
+  // 可填入單張圖片路徑，或依步驟順序填入多張圖片的陣列，例如 'images/pottery-process.gif'。
+  processImages: { '手拉胚': ['images/yunbao-pottery.gif'], '陶杯刻畫': 'images/cup.png', '植物槌染': 'images/plant.png' }
 };
 
 
