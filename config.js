@@ -18,7 +18,7 @@ globalThis.BOOKING_CONFIG = {
   },
   experiencePhotos: { '手拉胚': 'images/pottery.jpg', '陶杯刻畫': 'images/cup.jpg', '植物槌染': 'images/plant.jpg' },
   // 支援 PNG、JPG、WebP 和動態 GIF，例如 'images/pottery-process.gif'。
-  processImages: { '手拉胚': 'images/pottery.png', '陶杯刻畫': 'images/cup.png', '植物槌染': 'images/plant.png' }
+  processImages: { '手拉胚': 'images/yunbao-pottery.gif', '陶杯刻畫': 'images/cup.png', '植物槌染': 'images/plant.png' }
 };
 
 
